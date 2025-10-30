@@ -206,18 +206,18 @@ public:
     if(arena)
       new_list = arena->allocate<PoolBuffer<T>>(new_count);
     else
-      new_list = static_cast<PoolBuffer<T>*>(malloc(sizeof(PoolBuffer<T>) * new_count));
+      new_list = static_cast<PoolBuffer<T>*>(realloc(buffers, sizeof(PoolBuffer<T>) * new_count));
 
     if(!new_list) {
       free(new_buffer);
       return false;
     }
 
-    for(size_t i = 0; i < buffers_size; i++) {
-      new_list[i] = buffers[i];
+    if(arena) {
+      for(size_t i = 0; i < buffers_size; i++) {
+        new_list[i] = buffers[i];
+      }
     }
-
-    if(!arena) free(buffers);
 
     new_list[new_count - 1] = { new_buffer, size };
     buffers = new_list;
