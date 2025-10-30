@@ -40,7 +40,11 @@ public:
 
   template <typename T, typename... Args>
   T* allocate_new(Args&&... args) {
-    return new (allocate<T>()) T(std::forward<Args>(args)...);
+    T* new_item = allocate<T>();
+
+    if(!new_item) return nullptr;
+
+    return new (new_item) T(std::forward<Args>(args)...);
   }
 
   template <typename T>
