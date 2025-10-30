@@ -178,7 +178,11 @@ public:
 
   template <typename... Args>
   T* allocate_new(Args&&... args) {
-    return new (allocate()) T(std::forward<Args>(args)...);
+    T* new_item = allocate();
+
+    if(!new_item) return nullptr;
+
+    return new (new_item) T(std::forward<Args>(args)...);
   }
 
   T* allocate() {
