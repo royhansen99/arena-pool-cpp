@@ -203,7 +203,7 @@ public:
     // Use offsetof to safely get the address of the containing PoolItem.
     // We subtract the offset of the 'value' member from the 'ptr'.
     PoolItem<T>* item = reinterpret_cast<PoolItem<T>*>(
-      reinterpret_cast<T*>(ptr) - offsetof(PoolItem<T>, value)
+      reinterpret_cast<char*>(ptr) - offsetof(PoolItem<T>, value)
     );
 
     item->next = free_ptr;
