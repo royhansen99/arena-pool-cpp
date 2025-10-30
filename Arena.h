@@ -16,26 +16,26 @@
 
 class Arena {
 private:
+  Arena* parent;
   char* buffer;
   size_t total_size;
   size_t offset;
-  bool is_child;
 
 public:
   Arena(size_t size) :
+    parent(nullptr),
     buffer(static_cast<char*>(malloc(size))),
     total_size(size),
-    offset(0),
-    is_child(false) {}
+    offset(0) {}
 
   Arena(Arena &parent, size_t size) :
+    parent(&parent),
     buffer(static_cast<char*>(parent.allocate_raw(size))),
     total_size(size),
-    offset(0),
-    is_child(true) {}
+    offset(0) {}
 
   ~Arena() {
-    if(!is_child) free(buffer);
+    if(!parent) free(buffer);
   }
 
   template <typename T, typename... Args>
@@ -69,6 +69,23 @@ public:
     offset += new_size;
 
     return static_cast<void*>(new_allocation);
+  }
+
+  bool reset_grow(size_t size) {
+    char* new_buffer = static_cast<char*>(
+        parent ? parent->allocate_raw(total_size + size) :
+        malloc(total_size + size)
+    );
+
+    if(!new_buffer) return false;
+
+    if(!parent) free(buffer);
+
+    reset();
+
+    buffer = new_buffer;
+
+    return true;
   }
 
   void reset() {
