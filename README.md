@@ -109,6 +109,20 @@ int main() {
 }
 ```
 
+### Benchmarks
+
+(less is better)
+```
+(from ./benchmarks_alloc.cpp)
+Benchmarking 10000000 int allocations...
+Arena                 alloc:   0.47 ns  dealloc:   0.00 ns
+Pool (Arena)          alloc:   0.46 ns  dealloc:   0.05 ns
+Pool (malloc)         alloc:   0.49 ns  dealloc:   0.05 ns
+std::vector (fixed)   alloc:   0.92 ns  dealloc:   0.00 ns
+std::vector (dynamic) alloc:   1.60 ns  dealloc:   0.00 ns
+```
+* dealloc is done with a single reset-call for all types.
+
 ### API Documentation
 
 __Arena__:  
