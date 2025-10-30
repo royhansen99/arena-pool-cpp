@@ -217,6 +217,8 @@ public:
       new_list[i] = buffers[i];
     }
 
+    if(!arena) free(buffers);
+
     new_list[new_count - 1] = { new_buffer, size };
     buffers = new_list;
     buffers_size = new_count;
