@@ -124,12 +124,12 @@ be freed by the parent instead)
   `T`, if it is a class `args` should be constructor parameters.  
   Size: sizeof(T)  
 - `void* `allocate_raw(i)` // Allocate a raw chunk of `i` bytes/chars.  
-- `bool reset_grow(i)` // Grow the pool by `i` bytes (on top of  
-  current size). If this isn't a child arena, it will realloc() when  
-  growing, otherwise it will grab a new allocation without freeing the  
-  previous allocation, since individual allocations can't be freed from  
-  an arena. So in general you probably only want to grow an arena if it is  
-  a parent.
+- `bool resize(i)` // Resize the arena to `i` bytes. If this isn't a  
+  child arena it will free+malloc a new buffer, otherwise it will  
+  grab a new allocation from it's parent without freeing the previous  
+  allocation. So in general you want to avoid resizing child arenas  
+  because it leads to wasted memory. Resizing will reset/clear data
+  in the pool.
 - `void reset()` // Reset offset to 0, freeing up all bytes in the arena
   for re-use.  
 - `size_t size()` // Get the total bytes/chars allocated in the arena.  

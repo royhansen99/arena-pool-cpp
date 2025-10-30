@@ -71,10 +71,10 @@ public:
     return static_cast<void*>(new_allocation);
   }
 
-  bool reset_grow(size_t size) {
+  bool resize(size_t size) {
     char* new_buffer = static_cast<char*>(
-        parent ? parent->allocate_raw(total_size + size) :
-        malloc(total_size + size)
+        parent ? parent->allocate_raw(size) :
+        malloc(size)
     );
 
     if(!new_buffer) return false;
@@ -84,6 +84,7 @@ public:
     reset();
 
     buffer = new_buffer;
+    total_size = size;
 
     return true;
   }
