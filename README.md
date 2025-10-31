@@ -4,7 +4,8 @@ A very fast (zero-overhead) memory allocator with an arena/bump-allocator,
 and a pool-allocator.  
 Single header c++11 library.
 
-`Arena` allocator is essentially a bump-allocator with a pre-allocated  
+__Arena allocator__  
+Essentially a bump-allocator with a pre-allocated  
 amount of memory reserved up-front only once. As you allocate portions  
 inside the arena-memory it will simply bump a pointer offset.  
 Clearing/resetting the arena will simply set the offset back to 0.  
@@ -12,7 +13,8 @@ As a result of these things, allocations and clearing an arena is extremely
 fast with zero-overhead. Memory is freed when the class-destructor is called.  
 Nested arenas is also supported!
 
-`Pool` allocator is a contiguous object pool using a singly-linked intrusive  
+__Pool allocator__  
+A contiguous object pool using a singly-linked intrusive  
 free list. Each PoolItem<T> contains a next pointer and the user object T.  
 Allocation pops from the free list; deallocation pushes to the head.  
 Multiple fixed-size buffers are managed in a growable array of metadata  
