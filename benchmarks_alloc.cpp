@@ -6,6 +6,7 @@
 #include <iostream>
 #include <iomanip>
 #include <string.h>
+#include <list>
 
 using Clock = std::chrono::high_resolution_clock;
 using ns = std::chrono::nanoseconds;
@@ -23,7 +24,7 @@ int main() {
     b[0].single_free = true;
     b[0].N = 10000000;   // 10 million
 
-    strncpy(b[1].description, "Benchmarking %ld int allocations with a individual expensive deallocs\n", 200);
+    strncpy(b[1].description, "Benchmarking %ld int allocations with individual expensive dealloc\n", 200);
     b[1].single_free = false;
     b[1].N = 100000;   // 10 million
 
@@ -55,10 +56,10 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "Arena                 alloc: " << std::setw(6) << alloc_ns
+        std::cout << "Arena                   alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       } else {
-        std::cout << "Arena                 (individual dealloc not supported)\n";
+        std::cout << "Arena                   (individual dealloc not supported)\n";
       }
 
       // --------------------------------------------------------------
@@ -82,7 +83,7 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "Pool (Arena)          alloc: " << std::setw(6) << alloc_ns
+        std::cout << "Pool (Arena)            alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       }
 
@@ -106,12 +107,12 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "Pool (malloc)         alloc: " << std::setw(6) << alloc_ns
+        std::cout << "Pool (malloc)           alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
-      // 4. std::vector (fixed capacity)
+      // 4. std::vector (reserve())
       // --------------------------------------------------------------
       {
         std::vector<int> vec;
@@ -134,7 +135,7 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "std::vector (fixed)   alloc: " << std::setw(6) << alloc_ns
+        std::cout << "std::vector (reserve()) alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       }
 
@@ -152,7 +153,7 @@ int main() {
 
         t0 = Clock::now();
         if(single_free) {
-          vec.clear();  // REAL deallocation: just set size = 0
+          vec.clear();
         } else {
           while (!vec.empty()) {
             vec.erase(vec.begin());
@@ -161,7 +162,34 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "std::vector (dynamic) alloc: " << std::setw(6) << alloc_ns
+        std::cout << "std::vector (dynamic)   alloc: " << std::setw(6) << alloc_ns
+                  << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
+      }
+
+      // --------------------------------------------------------------
+      // 6. std::list
+      // --------------------------------------------------------------
+      {
+        std::list<int> list; 
+
+        auto t0 = Clock::now();
+        for (size_t i = 0; i < N; ++i)
+          list.push_back(static_cast<int>(i));
+        auto t1 = Clock::now();
+        double alloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
+
+        t0 = Clock::now();
+        if(single_free) {
+          list.clear();
+        } else {
+          while (!list.empty()) {
+            list.pop_back();
+          }
+        }
+        t1 = Clock::now();
+        double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
+
+        std::cout << "std::list               alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       }
 

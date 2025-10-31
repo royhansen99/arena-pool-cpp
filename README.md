@@ -113,24 +113,26 @@ int main() {
 
 ### Benchmarks
 
-__Less is better!__
+__Smaller numbers is better!__
 
 ```
 Benchmarking 10000000 int allocations with a single cheap mass-dealloc/reset
-Arena                 alloc:   0.55 ns  dealloc:   0.00 ns
-Pool (Arena)          alloc:   0.49 ns  dealloc:   0.06 ns
-Pool (malloc)         alloc:   0.55 ns  dealloc:   0.05 ns
-std::vector (fixed)   alloc:   0.96 ns  dealloc:   0.00 ns
-std::vector (dynamic) alloc:   1.70 ns  dealloc:   0.00 ns
+Arena                   alloc:   0.55 ns  dealloc:   0.00 ns
+Pool (Arena)            alloc:   0.62 ns  dealloc:   0.06 ns
+Pool (malloc)           alloc:   0.58 ns  dealloc:   0.05 ns
+std::vector (reserve()) alloc:   0.89 ns  dealloc:   0.00 ns
+std::vector (dynamic)   alloc:   1.50 ns  dealloc:   0.00 ns
+std::list               alloc:  11.44 ns  dealloc:  11.13 ns
 ```
 
 ```
-Benchmarking 100000 int allocations with a individual expensive deallocs
-Arena                 (individual dealloc not supported)
-Pool (Arena)          alloc:   0.39 ns  dealloc:   0.04 ns
-Pool (malloc)         alloc:   0.40 ns  dealloc:   0.04 ns
-std::vector (fixed)   alloc:   0.64 ns  dealloc: 3494.09 ns
-std::vector (dynamic) alloc:   1.56 ns  dealloc: 3418.68 ns
+Benchmarking 100000 int allocations with individual expensive dealloc
+Arena                   (individual dealloc not supported)
+Pool (Arena)            alloc:   0.36 ns  dealloc:   0.03 ns
+Pool (malloc)           alloc:   0.33 ns  dealloc:   0.03 ns
+std::vector (reserve()) alloc:   0.73 ns  dealloc: 3360.98 ns
+std::vector (dynamic)   alloc:   1.70 ns  dealloc: 3370.51 ns
+std::list               alloc:   9.33 ns  dealloc:  11.37 ns
 ```
 
 ### API Documentation
