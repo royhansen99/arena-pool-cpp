@@ -111,17 +111,25 @@ int main() {
 
 ### Benchmarks
 
-(less is better)
+__Less is better!__
+
 ```
-(from ./benchmarks_alloc.cpp)
-Benchmarking 10000000 int allocations...
-Arena                 alloc:   0.47 ns  dealloc:   0.00 ns
-Pool (Arena)          alloc:   0.46 ns  dealloc:   0.05 ns
-Pool (malloc)         alloc:   0.49 ns  dealloc:   0.05 ns
-std::vector (fixed)   alloc:   0.92 ns  dealloc:   0.00 ns
-std::vector (dynamic) alloc:   1.60 ns  dealloc:   0.00 ns
+Benchmarking 10000000 int allocations with a single cheap mass-dealloc/reset
+Arena                 alloc:   0.55 ns  dealloc:   0.00 ns
+Pool (Arena)          alloc:   0.49 ns  dealloc:   0.06 ns
+Pool (malloc)         alloc:   0.55 ns  dealloc:   0.05 ns
+std::vector (fixed)   alloc:   0.96 ns  dealloc:   0.00 ns
+std::vector (dynamic) alloc:   1.70 ns  dealloc:   0.00 ns
 ```
-* dealloc is done with a single reset-call for all types.
+
+```
+Benchmarking 100000 int allocations with a individual expensive deallocs
+Arena                 (individual dealloc not supported)
+Pool (Arena)          alloc:   0.39 ns  dealloc:   0.04 ns
+Pool (malloc)         alloc:   0.40 ns  dealloc:   0.04 ns
+std::vector (fixed)   alloc:   0.64 ns  dealloc: 3494.09 ns
+std::vector (dynamic) alloc:   1.56 ns  dealloc: 3418.68 ns
+```
 
 ### API Documentation
 
