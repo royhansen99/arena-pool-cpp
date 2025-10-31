@@ -162,9 +162,8 @@ be freed by the parent instead)
 __Pool__:  
 (Destructor will free allocated memory when pool owns it's own memory and  
 does not use an arena, otherwise if using an arena the arena will take care  
-of freeing memory)  
-in which case the underlying memory belongs to a parent, and will  
-be freed by the parent instead)  
+of freeing memory in which case the underlying memory belongs to a parent,  
+and will be freed by the parent instead)  
 - `Pool<T> Pool(i)` // Construct a new `Pool` of type `T` with a count  
   of `i`, allocated with malloc/free, allocation size: sizeof(T) * `i`  
 - `Pool<T> Pool(arena, i)` // Construct a new `Pool` of type `T` with a count  
@@ -184,6 +183,6 @@ In general, if allocate* calls fail, they will return `nullptr`, which
 means you can check for that to see if it has failed. A nullptr usually  
 means we are out of space.
 
-For grow calls we return true/false to indicate if it was successful  
+For grow/resize calls we return true/false to indicate if it was successful  
 or not. If it is unsuccessful the Arena/Pool remains intact without  
 growing (the Arena is not reset when grow fails).
