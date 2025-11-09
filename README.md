@@ -1,7 +1,7 @@
 # arena-pool-cpp
 
 A very fast (zero-overhead) memory allocator with an arena/bump-allocator,  
-and a pool-allocator.  
+a pool-allocator, and a vector-like array-allocator.  
 Single header c++11 library.
 
 __Arena allocator__  
@@ -24,6 +24,20 @@ This allocator works by either using an `Arena`, or by managing it's own
 memory using malloc/free.  
 If the pool manages it's own memory, free happens when the class-destructor  
 is called.
+
+__SArray allocator__
+Works in much the same way as `std::vector`, but with some important differences.  
+Will pre-allocate the specified size, with the ability to shrink/grow by doing  
+`resize()`. When full, push()/fill() will return false.  
+When removing items from beginning/middle, there will be an empty slot, since  
+it does not automatically move all items forward to cover the empty slot.  
+To move items forward and get rid of empty slots, there is a `compact()` method  
+that must be called manually. The `fill()` method will add new items into empty  
+slots if there is any, or at the end of the array.  
+The array operator[], or the `at()` method, will return a pointer to the item  
+(nullptr if the slot is empty).  
+This allocator works by either using an `Arena`, or by managing it's own  
+memory using malloc/free.  
 
 ### Usage
 
@@ -101,6 +115,51 @@ int main() {
   arena.reset(); 
   arena.used(); // 0 bytes (of 1024 bytes)
 
+  SArray<int> array(arena, 3);
+  // Ommit the arena parameter to simply use malloc
+  // instead.
+  // SArray<int> array(3);
+
+  array.push(1);
+  array.push(2);
+  array.push(3);
+
+  *array.at(0); // 1
+  *array[0]; // 1
+  *array.at(1); // 2 
+  *array[1]; // 2 
+
+  array.pop(); // Remove last item.
+  array.at(2); // nullptr
+  array[2]; // nullptr
+
+  array.erase(0); // Remove item at location 0.
+  array.at(0); // nullptr
+  array[0]; // nullptr
+
+  array.fill(100); // Fill item into first available
+                   // slot, starting from beginning.
+
+  array.at(0); // 100
+  array[0]; // 100
+
+  array.push(400);
+
+  array.erase(1);
+
+  array.compact(); // Cover any empty slots by moving forward.
+  *array[0]; // 100
+  *array[1]; // 400
+  *array[2]; // nullptr
+
+  array.resize(6); // Increase size from 3 to 6.
+
+  // Iterate through items in array, will automatically
+  // skip empty slots.
+  for(auto* it : array) {
+    std::cout << "Value: " << *it << "\n";
+  }
+
   // When the parent `arena` goes out of scope,
   // the destructor will free() the allocated
   // memory.
@@ -117,22 +176,26 @@ __Smaller numbers is better!__
 
 ```
 Benchmarking 10000000 int allocations with a single cheap mass-dealloc/reset
-Arena                   alloc:   0.55 ns  dealloc:   0.00 ns
-Pool (Arena)            alloc:   0.62 ns  dealloc:   0.06 ns
-Pool (malloc)           alloc:   0.58 ns  dealloc:   0.05 ns
-std::vector (reserve()) alloc:   0.89 ns  dealloc:   0.00 ns
-std::vector (dynamic)   alloc:   1.50 ns  dealloc:   0.00 ns
-std::list               alloc:  11.44 ns  dealloc:  11.13 ns
+Arena                   alloc:   0.50 ns  dealloc:   0.00 ns
+Pool (Arena)            alloc:   0.33 ns  dealloc:   0.03 ns
+Pool (malloc)           alloc:   0.36 ns  dealloc:   0.06 ns
+SArray (arena)          alloc:   0.37 ns  dealloc:   0.00 ns
+SArray (malloc)         alloc:   0.40 ns  dealloc:   0.00 ns
+std::vector (reserve()) alloc:   0.70 ns  dealloc:   0.00 ns
+std::vector (dynamic)   alloc:   1.38 ns  dealloc:   0.00 ns
+std::list               alloc:  11.60 ns  dealloc:  13.50 ns
 ```
 
 ```
 Benchmarking 100000 int allocations with individual expensive dealloc
 Arena                   (individual dealloc not supported)
-Pool (Arena)            alloc:   0.36 ns  dealloc:   0.03 ns
+Pool (Arena)            alloc:   0.33 ns  dealloc:   0.03 ns
 Pool (malloc)           alloc:   0.33 ns  dealloc:   0.03 ns
-std::vector (reserve()) alloc:   0.73 ns  dealloc: 3360.98 ns
-std::vector (dynamic)   alloc:   1.70 ns  dealloc: 3370.51 ns
-std::list               alloc:   9.33 ns  dealloc:  11.37 ns
+SArray (arena)          alloc:   0.47 ns  dealloc:  93.11 ns
+SArray (malloc)         alloc:   0.33 ns  dealloc:  95.78 ns
+std::vector (reserve()) alloc:   0.61 ns  dealloc: 3435.31 ns
+std::vector (dynamic)   alloc:   0.90 ns  dealloc: 3450.20 ns
+std::list               alloc:   8.17 ns  dealloc:  10.81 ns
 ```
 
 ### API Documentation
@@ -188,3 +251,41 @@ means we are out of space.
 For grow/resize calls we return true/false to indicate if it was successful  
 or not. If it is unsuccessful the Arena/Pool remains intact without  
 growing (the Arena is not reset when grow fails).
+
+
+__SArray__: (Stretchy Array)  
+(Destructor will free allocated memory when pool owns it's own memory and  
+does not use an arena, otherwise if using an arena the arena will take care  
+of freeing memory in which case the underlying memory belongs to a parent,  
+and will be freed by the parent instead)  
+- `SArray<T> SArray(i)` // Construct a new `SArray` of type `T` with a count  
+  of `i`, allocated with malloc/free, allocation size:  
+  (sizeof(T) * i) + (sizeof(bool) * i)  
+- `T* at(pos)` // Get item at position. Will return `nullptr` if empty slot.  
+- `T* operator[]` // Array accessor s\_array[2], works the same as `at(2)`.  
+- `T* first()` // Get the first item in the array. `nullptr` if array is empty.  
+- `T* last()` // Get the last item in the array. `nullptr` if  array is empty.  
+- `T* push(item)` // Push new item to end of array. Will return `nullptr` if  
+  it fails because the array is full.  
+- `T* push_new(...args)` // Construct new item at end of array, by directly  
+  specifying constructor params in this method. Will return `nullptr` if full.  
+- `T* fill(item)` // Add new item to array by first attempting to fill any  
+  empty slots in the middle/beginning of the array, or at the end. `nullptr`   
+  if full.  
+  Slower than `push()`, since it will check for empty slots.  
+- `T* fill_new(...args)` // Same as `push_new()`, but will attempt to fill empty  
+  slots first.  
+- `void pop()` // Remove item at the end of array.  
+- `void erase(pos)` // Remove item at specific position. If in the middle or  
+  beginning, there will be an empty slot at that position, since it does not  
+  automatically cover holes by moving items forward.  
+- `void erase_ptr(ptr)` // Same as `erase()`, but you provide a pointer to an  
+  item instead of a position.  
+- `void reset()` // Clear/empty all items.  
+- `void compact()` // Get rid of all empty slots from beginning/middle by  
+  moving items forward.  
+- `bool resize(size)` // Change the allocated size of the array. Will automatically  
+  run `compact()` before resizing starts. If shrinking the size, items past  
+  the new maximum size will be truncated.  
+- `size_t size()` // Get the total count (of type `T`) allocated in the pool.   
+- `size_t used()` // Get the used count (of type `T`)  

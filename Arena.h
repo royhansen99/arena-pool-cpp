@@ -1,11 +1,12 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.0.1
+ * Version: 0.0.2
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
  * Description: A very fast (zero-overhead) memory allocator with
- *              an arena/bump-allocator, and a pool-allocator.
+ *              an arena/bump-allocator, a pool-allocator, and a
+ *              vector-like array-allocator.
  *              Single header c++11 library.
  */
 #pragma once
@@ -13,6 +14,9 @@
 #include <utility>
 #include <cstdlib>
 #include <cstddef>
+#include <type_traits>
+#include <cstring>
+#include <new>
 
 class Arena {
 private:
@@ -97,11 +101,11 @@ public:
     offset = 0;
   }
 
-  size_t size() {
+  size_t size() const {
     return total_size;
   }
 
-  size_t used() {
+  size_t used() const {
     return offset;
   }
 };
@@ -259,7 +263,7 @@ public:
     return true;
   }
 
-  size_t size() {
+  size_t size() const {
     size_t total_size = 0;
 
     for(size_t i = 0; i < buffers_size; i++) {
@@ -269,7 +273,378 @@ public:
     return total_size;
   }
 
-  size_t used() {
+  size_t used() const {
     return _used;
+  }
+};
+
+template <typename T>
+class SArray {
+private: 
+  Arena* arena;
+  T* buffer;
+  bool* active;
+  size_t buffer_size;
+  size_t _used;
+  size_t _last;
+
+  void maybe_set_last(size_t pos) {
+    if(_last != pos) return;
+
+    _last = 0;
+
+    if(!_used) return;
+
+    for(size_t i = 0; i < buffer_size; i++) {
+      if(active[i]) _last = i + 1;
+    }
+  }
+
+public:
+  class iterator {
+    T* ptr;
+    bool* active;
+    T* end;
+    size_t i;
+  public:
+    explicit iterator(T* _ptr, bool* a, T* e, bool empty) :
+      ptr(_ptr),
+      active(a),
+      end(e),
+      i(0)
+    {
+      if(!empty) {
+        while((ptr + i) != end && !active[i])
+          i++;
+      }
+    }
+    T& operator*() const { return ptr[i]; }
+    iterator& operator++() {
+      i++;
+
+      while((ptr + i) != end && !active[i]) {
+        i++;
+      }
+
+      return *this;
+    }
+    bool operator!=(const iterator& other) const { return (ptr + i) != other.ptr; }
+  };
+
+  SArray(size_t size) :
+    arena(nullptr),
+    buffer(static_cast<T*>(malloc(sizeof(T) * size))),
+    active(static_cast<bool*>(malloc(sizeof(bool) * size))),
+    buffer_size(size),
+    _used(0),
+    _last(0)
+  {
+    if(!buffer || !active) buffer_size = 0;
+    if(!buffer && active) free(active);
+    if(!active && buffer) free(buffer);
+  }
+
+  SArray(Arena &_arena, size_t size) :
+    arena(&_arena),
+    buffer(arena->allocate<T>(size)),
+    active(arena->allocate<bool>(size)),
+    buffer_size(size),
+    _used(0),
+    _last(0)
+  {
+    if(!buffer || !active) buffer_size = 0;
+    if(!buffer && active) free(active);
+    if(!active && buffer) free(buffer);
+  }
+
+  ~SArray() {
+    if(!arena && buffer_size) {
+      free(buffer);
+      free(active);
+    }
+  }
+
+  T* operator[](size_t i) {
+    if(!_used || i >= buffer_size ||  !active[i]) return nullptr;
+    return &(buffer[i]);
+  }
+
+  const T* operator[](size_t i) const {
+    if(!_used || i >= buffer_size ||  !active[i]) return nullptr;
+    return &(buffer[i]);
+  }
+
+  iterator begin() {
+    return iterator(buffer, active, &(buffer[_last]), _used == 0);
+  }
+
+  const iterator begin() const {
+    return iterator(buffer, active, &(buffer[_last]), _used == 0);
+  }
+
+  iterator end() {
+    return iterator(&(buffer[_last]), active, &(buffer[_last]), true);
+  }
+
+  const iterator end() const {
+    return iterator(&(buffer[_last]), active, &(buffer[_last]), true);
+  }
+
+  T* first() {
+    if(_used) {
+      for(size_t i = 0; i < buffer_size; i++) {
+        if(active[i]) return &(buffer[i]);
+      }
+    }
+
+    return nullptr;
+  }
+
+  const T* first() const {
+    if(_used) {
+      for(size_t i = 0; i < buffer_size; i++) {
+        if(active[i]) return &(buffer[i]);
+      }
+    }
+
+    return nullptr;
+  }
+
+  T* last() {
+    if(!_used) return nullptr;
+
+    return &(buffer[_last - 1]);
+  }
+
+  const T* last() const {
+    if(!_used) return nullptr;
+
+    return &(buffer[_last - 1]);
+  }
+
+  T* at(size_t pos) {
+    if(!_used || pos >= buffer_size ||  !active[pos]) return nullptr;
+
+    return &(buffer[pos]);
+  }
+
+  const T* at(size_t pos) const {
+    if(!_used || pos >= buffer_size ||  !active[pos]) return nullptr;
+
+    return &(buffer[pos]);
+  }
+
+  template <typename U>
+  T* fill(U &&item) {
+    if(_used == buffer_size) return nullptr;
+
+    for(size_t i = 0; i < buffer_size; i++) {
+      if(active[i]) continue;
+
+      if(std::is_trivially_copyable<T>::value) {
+        memcpy(&(buffer[i]), &item, sizeof(T));
+      } else {
+        buffer[i] = std::forward<U>(item);
+      }
+
+      active[i] = true;
+      _used++;
+
+      if(i == _last) _last++;
+
+      return &(buffer[i]);
+    }
+
+    return nullptr;
+  }
+
+  template <typename... Args>
+  T* fill_new(Args&&... args) {
+    if(_used == buffer_size) return nullptr;
+
+    for(size_t i = 0; i < buffer_size; i++) {
+      if(active[i]) continue;
+
+      new (&(buffer[i])) T(std::forward<Args>(args)...);
+
+      active[i] = true;
+      _used++;
+
+      if(i == _last) _last++;
+
+      return &(buffer[i]);
+    }
+
+    return nullptr;
+  }
+
+  template <typename U>
+  T* push(U &&item) {
+    if(_used == buffer_size) return nullptr;
+
+    if(std::is_trivially_copyable<T>::value) {
+      memcpy(&(buffer[_last]), &item, sizeof(T));
+    } else {
+      buffer[_last] = std::forward<U>(item);
+    }
+
+    active[_last] = true;
+    _used++;
+    _last++;
+
+    return &(buffer[_last - 1]);
+  }
+
+  template <typename... Args>
+  T* push_new(Args&&... args) {
+    if(_used == buffer_size) return nullptr;
+
+    new (&(buffer[_last])) T(std::forward<Args>(args)...);
+    active[_last] = true;
+    _used++;
+    _last++;
+
+    return &(buffer[_last - 1]);
+  }
+
+  void pop() {
+    if(!_used) return;
+
+    _used--;
+    active[_last - 1] = false;
+
+    maybe_set_last(_last);
+  }
+
+  void erase_ptr(T *item) {
+    erase(((size_t)item - (size_t)buffer) / sizeof(T));
+  }
+
+  void erase(size_t pos) {
+    if(pos <  0 || pos >= buffer_size || !active[pos]) return;
+
+    active[pos] = false;
+    _used--;
+
+    maybe_set_last(pos);
+  }
+
+  void reset() {
+    for(size_t i = 0; i < buffer_size; i++)
+      active[i] = false;
+
+    _used = 0;
+    _last = 0;
+  }
+
+  void compact() {
+    if(!_used) return;
+
+    size_t target = -1;
+    for(size_t i = 0; i < buffer_size; i++) {
+      if(target ==  _used) {
+        break;
+      } else if(target == -1) { 
+        if(!active[i]) target = i;
+      } else if(active[i]) {
+        if(std::is_trivially_copyable<T>())
+          memcpy(&(buffer[target]), &(buffer[i]), sizeof(T));
+        else
+          buffer[target] = std::move(buffer[i]);
+
+        active[i] = false;
+        active[target] = true;
+        target++;
+      }
+    }
+
+    if(target != -1) _last = target;
+  }
+
+  bool resize(size_t size) {
+    compact();
+
+    if(size == buffer_size) return true;
+
+    T* new_buffer = nullptr;
+    bool *new_active = nullptr;
+
+    size_t copy_size = size > buffer_size ? buffer_size : size;
+
+    if(arena) {
+      if(size < buffer_size) return false;
+
+      new_buffer = arena->allocate<T>(size);
+
+      if(new_buffer)
+        new_active = arena->allocate<bool>(size);
+
+      if(new_buffer && new_active) {
+        if(std::is_trivially_copyable<T>()) {
+          memcpy(new_buffer, buffer, sizeof(T) * copy_size);
+        } else {
+          for(size_t i = 0; i < copy_size; i++) {
+            if(!active[i]) break;
+            new_buffer[i] = std::move(buffer[i]);
+          }
+        }
+
+        memcpy(new_active, active, sizeof(bool) * copy_size);
+      } else {
+        new_buffer = nullptr;
+        new_active = nullptr;
+      }
+    } else {
+      if(std::is_trivially_copyable<T>()) {
+        new_buffer = static_cast<T*>(realloc(buffer, sizeof(T) * size));
+      } else {
+        new_buffer = static_cast<T*>(malloc(sizeof(T) * size));
+
+        if(new_buffer) {
+          for(size_t i = 0; i < copy_size; i++) {
+              if(!active[i]) break;
+
+              new_buffer = std::move(&(buffer[i]));
+          }
+
+          free(buffer);
+        }
+      }
+
+      if(new_buffer) {
+        new_active = static_cast<bool*>(realloc(active, sizeof(bool) * size));
+      }
+    }
+
+    if(new_buffer) buffer = new_buffer;
+
+    if(new_active) {
+      if(size > buffer_size) {
+        for(size_t i = copy_size; i < size; i++) {
+          new_active[i] = false;
+        }
+      }
+
+      if(_used > size) _used = size;
+
+      active = new_active;
+      buffer_size = size;
+
+      return true;
+    }
+
+    return false;
+  }
+
+  size_t used() const {
+    return _used;
+  }
+
+  size_t size() const {
+    return buffer_size;
+  }
+
+  bool empty() const {
+    return _used == 0;
   }
 };
