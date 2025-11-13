@@ -1,4 +1,5 @@
 #include "./Arena.h"
+#include <iostream>
 
 struct Foo {
     char value[20];
@@ -29,9 +30,9 @@ int main() {
   arena.used(); // 208 bytes (of 1024 bytes)
 
   // Allocate some items from the pool.
-  Foo* foo1 = foo_pool.allocate();
-  Foo* foo2 = foo_pool.allocate();
-  Foo* foo3 = foo_pool.allocate();
+  Foo* foo1 = foo_pool.allocate(Foo{"Test1", 1});
+  Foo* foo2 = foo_pool.allocate(Foo{"Test2", 2});
+  Foo* foo3 = foo_pool.allocate(Foo{"Test3", 3});
 
   // Deallocate/remove one item.
   foo_pool.deallocate(foo3);
@@ -68,9 +69,56 @@ int main() {
   arena.reset(); 
   arena.used(); // 0 bytes (of 1024 bytes)
 
+  SArray<int> array(arena, 3);
+  // Ommit the arena parameter to simply use malloc
+  // instead.
+  // SArray<int> array(3);
+
+  array.push(1);
+  array.push(2);
+  array.push(3);
+
+  *array.at(0); // 1
+  *array[0]; // 1
+  *array.at(1); // 2 
+  *array[1]; // 2 
+
+  array.pop(); // Remove last item.
+  array.at(2); // nullptr
+  array[2]; // nullptr
+
+  array.erase(0); // Remove item at location 0.
+  array.at(0); // nullptr
+  array[0]; // nullptr
+
+  array.fill(100); // Fill item into first available
+                   // slot, starting from beginning.
+
+  array.at(0); // 100
+  array[0]; // 100
+
+  array.push(400);
+
+  array.erase(1);
+
+  array.compact(); // Cover any empty slots by moving forward.
+  *array[0]; // 100
+  *array[1]; // 400
+  *array[2]; // nullptr
+
+  array.resize(6); // Increase size from 3 to 6.
+
+  // Iterate through items in array, will automatically
+  // skip empty slots.
+  for(auto &it : array) {
+    std::cout << "Value: " << it << "\n";
+  }
+
   // When the parent `arena` goes out of scope,
   // the destructor will free() the allocated
   // memory.
+  // Since everything in this example is using this
+  // arena, it is all freed when the arena is freed. 
 
   return 0;
 }

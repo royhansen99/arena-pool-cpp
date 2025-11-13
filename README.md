@@ -46,6 +46,7 @@ Simply drop the single header `Arena.h` file directly in to your project.
 ```cpp
 /* (From ./example.cpp in this repo) */
 #include "./Arena.h"
+#include <iostream>
 
 struct Foo {
     char value[20];
@@ -156,8 +157,8 @@ int main() {
 
   // Iterate through items in array, will automatically
   // skip empty slots.
-  for(auto* it : array) {
-    std::cout << "Value: " << *it << "\n";
+  for(auto &it : array) {
+    std::cout << "Value: " << it << "\n";
   }
 
   // When the parent `arena` goes out of scope,
