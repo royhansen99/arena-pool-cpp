@@ -25,7 +25,7 @@ memory using malloc/free.
 If the pool manages it's own memory, free happens when the class-destructor  
 is called.
 
-__SArray allocator__
+__SArray allocator__  
 Works in much the same way as `std::vector`, but with some important differences.  
 Will pre-allocate the specified size, with the ability to shrink/grow by doing  
 `resize()`. When full, push()/fill() will return false.  
@@ -205,7 +205,7 @@ __Arena__:
 in which case the underlying memory belongs to a parent, and will  
 be freed by the parent instead)  
 - `Arena Arena(i)` // Construct a new `Arena` instance of `i` bytes.   
-- `Arena Arena(parent, i) // Construct a new child `Arena` which is  
+- `Arena Arena(parent, i)` // Construct a new child Arena` which is  
    nested inside `parent`, child will be `i` bytes.  
 - `T* <T>allocate(i) // Allocate a chunk inside the arena with  
   size: sizeof(T) * i  
