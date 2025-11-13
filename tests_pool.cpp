@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
+#include <string>
 
 int main() {
   std::cout << "Running Pool tests...\n";
@@ -21,7 +22,7 @@ int main() {
     assert(*a == 111 && *b == 222 && *c == 333);
     assert(pool.used() == 3);
 
-    assert(pool.allocate() == nullptr);  // overflow -> nullptr
+    assert(pool.allocate(444) == nullptr);  // overflow -> nullptr
     assert(pool.used() == 3);
   }
 
@@ -55,7 +56,7 @@ int main() {
     int* r = pool.allocate_new(100);
     assert(q && r);
     assert(pool.used() == 3);
-    assert(pool.allocate() == nullptr); // overflow -> nullptr
+    assert(pool.allocate(50) == nullptr); // overflow -> nullptr
 
     pool.deallocate(q);
     pool.deallocate(r);
@@ -135,5 +136,69 @@ int main() {
     }
 
     assert(pool.used() == 0);
+  }
+
+  // ------------------------------------------------------------------
+  // Using with a class 
+  // ------------------------------------------------------------------
+  {
+    class Person {
+    public:
+      std::string name; 
+      int age;
+
+      Person(const char* n, int &&a) {
+        name = n; 
+        age = a;
+      }
+    };
+
+    Pool<Person> pool(3);
+
+    Person* john = pool.allocate_new("John", 20);
+    Person* jane = pool.allocate_new("Jane", 22);
+
+    assert(
+      pool.size() == 3 &&
+      pool.used() == 2 &&
+      john->name == "John" && john->age == 20 &&
+      jane->name == "Jane" && jane->age == 22
+    );
+
+    pool.deallocate(john);
+
+    assert(
+      pool.used() == 1 
+    );
+
+    Person* jack = pool.allocate_new("Jack", 40);
+
+    // The address of "John" was freed and was therefore
+    // used for the new "Jack" item, assert that values
+    // are set to Jack.
+    assert(
+      john->name == "Jack" &&
+      john->age == 40 &&
+      john == jack 
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Using with a struct 
+  // ------------------------------------------------------------------
+  {
+    struct Person {
+      std::string name;
+      int age;
+    };
+
+    Pool<Person> pool(2);
+
+    auto* john = pool.allocate(Person{"John", 20});
+
+    assert(
+      john->name == "John" &&
+      john->age == 20
+    );
   }
 }

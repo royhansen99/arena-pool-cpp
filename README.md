@@ -14,8 +14,8 @@ fast with zero-overhead. Memory is freed when the class-destructor is called.
 Nested arenas is also supported!
 
 __Pool allocator__  
-A contiguous object pool using a singly-linked intrusive  
-free list. Each PoolItem<T> contains a next pointer and the user object T.  
+A contiguous object pool using a combined doubly/singly-linked free/used list.  
+Each PoolItem<T> contains a prev/next pointer and the user object T.  
 Allocation pops from the free list; deallocation pushes to the head.  
 Multiple fixed-size buffers are managed in a growable array of metadata  
 (PoolBuffer<T>). The free list spans all buffers, enabling O(1) operations  
@@ -76,9 +76,9 @@ int main() {
   arena.used(); // 208 bytes (of 1024 bytes)
 
   // Allocate some items from the pool.
-  Foo* foo1 = foo_pool.allocate();
-  Foo* foo2 = foo_pool.allocate();
-  Foo* foo3 = foo_pool.allocate();
+  Foo* foo1 = foo_pool.allocate(Foo{"Test1", 1});
+  Foo* foo2 = foo_pool.allocate(Foo{"Test2", 2});
+  Foo* foo3 = foo_pool.allocate(Foo{"Test3", 3});
 
   // Deallocate/remove one item.
   foo_pool.deallocate(foo3);
@@ -176,26 +176,26 @@ __Smaller numbers is better!__
 
 ```
 Benchmarking 10000000 int allocations with a single cheap mass-dealloc/reset
-Arena                   alloc:   0.50 ns  dealloc:   0.00 ns
-Pool (Arena)            alloc:   0.33 ns  dealloc:   0.03 ns
-Pool (malloc)           alloc:   0.36 ns  dealloc:   0.06 ns
-SArray (arena)          alloc:   0.37 ns  dealloc:   0.00 ns
-SArray (malloc)         alloc:   0.40 ns  dealloc:   0.00 ns
-std::vector (reserve()) alloc:   0.70 ns  dealloc:   0.00 ns
-std::vector (dynamic)   alloc:   1.38 ns  dealloc:   0.00 ns
-std::list               alloc:  11.60 ns  dealloc:  13.50 ns
+Arena                   alloc:   0.43 ns  dealloc:   0.00 ns
+Pool (Arena)            alloc:   0.38 ns  dealloc:   0.05 ns
+Pool (malloc)           alloc:   0.38 ns  dealloc:   0.05 ns
+SArray (arena)          alloc:   0.34 ns  dealloc:   0.00 ns
+SArray (malloc)         alloc:   0.62 ns  dealloc:   0.00 ns
+std::vector (reserve()) alloc:   0.60 ns  dealloc:   0.00 ns
+std::vector (dynamic)   alloc:   1.26 ns  dealloc:   0.00 ns
+std::list               alloc:  10.96 ns  dealloc:  15.85 ns
 ```
 
 ```
 Benchmarking 100000 int allocations with individual expensive dealloc
 Arena                   (individual dealloc not supported)
-Pool (Arena)            alloc:   0.33 ns  dealloc:   0.03 ns
-Pool (malloc)           alloc:   0.33 ns  dealloc:   0.03 ns
-SArray (arena)          alloc:   0.47 ns  dealloc:  93.11 ns
-SArray (malloc)         alloc:   0.33 ns  dealloc:  95.78 ns
-std::vector (reserve()) alloc:   0.61 ns  dealloc: 3435.31 ns
-std::vector (dynamic)   alloc:   0.90 ns  dealloc: 3450.20 ns
-std::list               alloc:   8.17 ns  dealloc:  10.81 ns
+Pool (Arena)            alloc:   0.35 ns  dealloc:   0.04 ns
+Pool (malloc)           alloc:   0.34 ns  dealloc:   0.04 ns
+SArray (arena)          alloc:   0.36 ns  dealloc:  95.50 ns
+SArray (malloc)         alloc:   0.60 ns  dealloc:  94.42 ns
+std::vector (reserve()) alloc:   0.73 ns  dealloc: 3477.17 ns
+std::vector (dynamic)   alloc:   1.45 ns  dealloc: 3506.30 ns
+std::list               alloc:   8.51 ns  dealloc:  37.08 ns
 ```
 
 ### API Documentation
@@ -233,13 +233,15 @@ and will be freed by the parent instead)
   of `i`, allocated with malloc/free, allocation size: sizeof(T) * `i`  
 - `Pool<T> Pool(arena, i)` // Construct a new `Pool` of type `T` with a count  
   of `i`, allocated in `arena`, allocation size: sizeof(T) * `i`  
-- `T* allocate()` // Grab a single allocation from the pool for assignment. 
+- `T* allocate(U &&item)` // Grab a single allocation from the pool and copy  
+  item into it.   
 - `T* allocate_new(args...)` // Grab a single allocation from the pool, if it  
   is a class it will use `args` as constructor parameters.  
 - `void deallocate(allocate_ptr)`// Release a single allocation by providing  
   a pointer that was received from a previous `allocate()`/`allocate_new()` call.  
+  Will also call destructor if non-trivial T.  
 - `void reset()` // Release all allocations, freeing up all usage for new  
-  allocations in the pool.  
+  allocations in the pool. Will also call destructor on all items if non-trivial T.   
 - `bool grow(i)` // Grow the pool by a count of `i` (on top of the current size).  
 - `size_t size()` // Get the total count (of type `T`) allocated in the pool.   
 - `size_t used()` // Get the used count (of type `T`)  
@@ -275,13 +277,16 @@ and will be freed by the parent instead)
   Slower than `push()`, since it will check for empty slots.  
 - `T* fill_new(...args)` // Same as `push_new()`, but will attempt to fill empty  
   slots first.  
-- `void pop()` // Remove item at the end of array.  
+- `void pop()` // Remove item at the end of array. Will also call destruct if  
+  non-trivial T.  
 - `void erase(pos)` // Remove item at specific position. If in the middle or  
   beginning, there will be an empty slot at that position, since it does not  
-  automatically cover holes by moving items forward.  
+  automatically cover holes by moving items forward. Will also call destruct if  
+  non-trivial T.  
 - `void erase_ptr(ptr)` // Same as `erase()`, but you provide a pointer to an  
   item instead of a position.  
-- `void reset()` // Clear/empty all items.  
+- `void reset()` // Clear/empty all items. Will also call destruct on all items  
+  if non-trivial T.  
 - `void compact()` // Get rid of all empty slots from beginning/middle by  
   moving items forward.  
 - `bool resize(size)` // Change the allocated size of the array. Will automatically  

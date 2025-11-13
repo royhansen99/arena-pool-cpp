@@ -214,11 +214,11 @@ int main() {
   {
     class Person {
     public:
-      char name[50];
+      std::string name;
       int age;
 
       Person(const char* n, int &&a) {
-        strncpy(name, n, 50); 
+        name = n;
         age = a;
       }
     };
@@ -231,13 +231,15 @@ int main() {
       arr.used() == 1 &&
       arr.size() == 3 &&
       (*arr[0]).age == 20 &&
+      (*arr[0]).name == "John" &&
       arr[1] == nullptr
     );
 
     assert(
       (*arr.push_new("Doe", 30)).age == 30 &&
       arr.used() == 2 &&
-      (*arr[1]).age == 30
+      (*arr[1]).age == 30 &&
+      (*arr[1]).name == "Doe" 
     );
   }
 }

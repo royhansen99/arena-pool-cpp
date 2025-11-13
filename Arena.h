@@ -113,6 +113,7 @@ public:
 template <typename T>
 struct PoolItem {
   PoolItem* next; 
+  PoolItem* prev; 
   T value;
 };
 
@@ -130,7 +131,24 @@ private:
   PoolBuffer<T>* buffers;
   size_t buffers_size;
   PoolItem<T>* free_ptr;
+  PoolItem<T>* use_ptr;
   size_t _used;
+
+  T* allocate_raw() {
+    if(!free_ptr) return nullptr;
+
+    PoolItem<T>* chunk = free_ptr;
+    free_ptr = free_ptr->next;
+
+    if(use_ptr) use_ptr->prev = chunk;
+
+    chunk->next = use_ptr;
+    chunk->prev = nullptr;
+    use_ptr = chunk;
+    _used++;
+
+    return &chunk->value;
+  }
 
 public:
   Pool(Arena &_arena, size_t pool_size) :
@@ -138,6 +156,7 @@ public:
     buffers(arena->allocate<PoolBuffer<T>>()),
     buffers_size(1),
     free_ptr(nullptr),
+    use_ptr(nullptr),
     _used(0)
   {
     buffers[0] = { arena->allocate<PoolItem<T>>(pool_size), pool_size };
@@ -149,6 +168,7 @@ public:
     buffers(static_cast<PoolBuffer<T>*>(malloc(sizeof(PoolBuffer<T>)))),
     buffers_size(1),
     free_ptr(nullptr),
+    use_ptr(nullptr),
     _used(0)
   {
     buffers[0] = {
@@ -160,6 +180,13 @@ public:
   }
 
   ~Pool() {
+    if(!std::is_trivial<T>::value) {
+      while(use_ptr) {
+        use_ptr->value.~T();
+        use_ptr = use_ptr->next;
+      }
+    }
+
     if(!arena) {
       for(size_t i = 0; i < buffers_size; i++) {
         free(buffers[i].buffer);
@@ -170,12 +197,21 @@ public:
   }
 
   void reset() {
+    if(!std::is_trivial<T>::value) {
+      while(use_ptr) {
+        use_ptr->value.~T();
+        use_ptr = use_ptr->next;
+      }
+    }
+
     PoolItem<T>* previous = nullptr;
     for(size_t i = 0; i < buffers_size; i++) {
       for(size_t z = 0; z < buffers[i].size; z++) {
         if(previous) previous->next = &(buffers[i].buffer[z]);
 
         previous = &(buffers[i].buffer[z]);
+        previous->prev = nullptr;
+        previous->next = nullptr;
       }
     }
 
@@ -187,27 +223,29 @@ public:
 
   template <typename... Args>
   T* allocate_new(Args&&... args) {
-    T* new_item = allocate();
+    T* new_item = allocate_raw();
 
     if(!new_item) return nullptr;
 
     return new (new_item) T(std::forward<Args>(args)...);
   }
 
-  T* allocate() {
-    if(!free_ptr) return nullptr;
+  template <typename U>
+  T* allocate(U &&item) {
+    T* new_item = allocate_raw();
 
-    PoolItem<T>* chunk = free_ptr;
-    free_ptr = free_ptr->next;
-    _used++;
+    if(!new_item) return nullptr;
 
-    return &chunk->value;
+    if(std::is_trivially_copyable<T>::value)
+      memcpy(new_item, &item, sizeof(T));
+    else
+      new (new_item) T(std::forward<U>(item));
+
+    return new_item;
   }
 
   void deallocate(T* ptr) {
     if(ptr == nullptr) return;
-
-    ptr->~T();
 
     // Use offsetof to safely get the address of the containing PoolItem.
     // We subtract the offset of the 'value' member from the 'ptr'.
@@ -215,8 +253,20 @@ public:
       reinterpret_cast<char*>(ptr) - offsetof(PoolItem<T>, value)
     );
 
+    // ptr->prev is only set if allocated, otherwise if an item is free
+    // it is nullptr.
+    if(use_ptr != item && item->prev == nullptr) return;
+
+    if(!std::is_trivial<T>::value) item->value.~T();
+
+    if(item->prev) item->prev->next = item->next;
+    if(item->next) item->next->prev = item->prev;
+    if(use_ptr == item) use_ptr = item->next;
+
     item->next = free_ptr;
+    item->prev = nullptr;
     free_ptr = item;
+
     _used--;
   }
 
@@ -358,6 +408,12 @@ public:
   }
 
   ~SArray() {
+    if(!std::is_trivial<T>::value) {
+      for(size_t i = 0; i < buffer_size; i++) {
+        if(active[i]) buffer[i].~T();
+      }
+    }
+
     if(!arena && buffer_size) {
       free(buffer);
       free(active);
@@ -444,7 +500,7 @@ public:
       if(std::is_trivially_copyable<T>::value) {
         memcpy(&(buffer[i]), &item, sizeof(T));
       } else {
-        buffer[i] = std::forward<U>(item);
+        new (&buffer[i]) T(std::forward<U>(item));
       }
 
       active[i] = true;
@@ -485,7 +541,7 @@ public:
     if(std::is_trivially_copyable<T>::value) {
       memcpy(&(buffer[_last]), &item, sizeof(T));
     } else {
-      buffer[_last] = std::forward<U>(item);
+      new (&buffer[_last]) T(std::forward<U>(item));
     }
 
     active[_last] = true;
@@ -513,6 +569,8 @@ public:
     _used--;
     active[_last - 1] = false;
 
+    if(!std::is_trivial<T>::value) buffer[_last - 1].~T();
+
     maybe_set_last(_last);
   }
 
@@ -523,15 +581,21 @@ public:
   void erase(size_t pos) {
     if(pos <  0 || pos >= buffer_size || !active[pos]) return;
 
-    active[pos] = false;
     _used--;
+    active[pos] = false;
+
+    if(!std::is_trivial<T>::value) buffer[pos].~T();
 
     maybe_set_last(pos);
   }
 
   void reset() {
-    for(size_t i = 0; i < buffer_size; i++)
+    for(size_t i = 0; i < buffer_size; i++) {
+      if(active[i] && !std::is_trivial<T>::value)
+        buffer[i].~T();
+
       active[i] = false;
+    }
 
     _used = 0;
     _last = 0;
