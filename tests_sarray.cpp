@@ -217,29 +217,23 @@ int main() {
       std::string name;
       int age;
 
-      Person(const char* n, int &&a) {
-        name = n;
-        age = a;
-      }
+      Person(const char* n, int &&a): name(n), age(a) { }
     };
 
     SArray<Person> arr(3);
-    Person z("John", 20);
+
+    arr.push_new("John", 2);
+    arr.push_new("Jane", 3);
+    arr.push_new("James", 4);
+
+    arr.erase(1);
+
+    arr.resize(2);
 
     assert(
-      (*arr.push(z)).age == 20 &&
-      arr.used() == 1 &&
-      arr.size() == 3 &&
-      (*arr[0]).age == 20 &&
-      (*arr[0]).name == "John" &&
-      arr[1] == nullptr
-    );
-
-    assert(
-      (*arr.push_new("Doe", 30)).age == 30 &&
       arr.used() == 2 &&
-      (*arr[1]).age == 30 &&
-      (*arr[1]).name == "Doe" 
+      arr[0]->name == "John" &&
+      arr[1]->name == "James"
     );
   }
 }

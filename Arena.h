@@ -611,10 +611,12 @@ public:
       } else if(target == -1) { 
         if(!active[i]) target = i;
       } else if(active[i]) {
-        if(std::is_trivially_copyable<T>())
+        if(std::is_trivially_copyable<T>::value) {
           memcpy(&(buffer[target]), &(buffer[i]), sizeof(T));
-        else
-          buffer[target] = std::move(buffer[i]);
+        } else {
+          new (&buffer[target]) T(std::move(buffer[i]));
+          buffer[i].~T();
+        }
 
         active[i] = false;
         active[target] = true;
@@ -644,12 +646,16 @@ public:
         new_active = arena->allocate<bool>(size);
 
       if(new_buffer && new_active) {
-        if(std::is_trivially_copyable<T>()) {
+        if(std::is_trivially_copyable<T>::value) {
           memcpy(new_buffer, buffer, sizeof(T) * copy_size);
         } else {
-          for(size_t i = 0; i < copy_size; i++) {
+          for(size_t i = 0; i < buffer_size; i++) {
             if(!active[i]) break;
-            new_buffer[i] = std::move(buffer[i]);
+
+            if(i < copy_size)
+              new (&new_buffer[i]) T(std::move(buffer[i]));
+
+            buffer[i].~T();
           }
         }
 
@@ -659,16 +665,19 @@ public:
         new_active = nullptr;
       }
     } else {
-      if(std::is_trivially_copyable<T>()) {
+      if(std::is_trivially_copyable<T>::value) {
         new_buffer = static_cast<T*>(realloc(buffer, sizeof(T) * size));
       } else {
         new_buffer = static_cast<T*>(malloc(sizeof(T) * size));
 
         if(new_buffer) {
-          for(size_t i = 0; i < copy_size; i++) {
+          for(size_t i = 0; i < buffer_size; i++) {
               if(!active[i]) break;
 
-              new_buffer = std::move(&(buffer[i]));
+              if(i < copy_size)
+                new (&new_buffer[i]) T(std::move(buffer[i]));
+
+              buffer[i].~T();
           }
 
           free(buffer);
