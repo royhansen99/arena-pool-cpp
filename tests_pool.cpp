@@ -1,3 +1,5 @@
+// COMPILE: g++ -std=c++11 -fsanitize=address tests_pool.cpp
+
 #include "./Arena.h"
 #include <cassert>
 #include <cstring>
