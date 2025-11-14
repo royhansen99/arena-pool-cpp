@@ -237,5 +237,12 @@ int main() {
       arr[0]->name == "John" &&
       arr[1]->name == "James"
     );
+
+    *arr[1] = Person("Frank", 9);
+
+    assert(
+      arr.at(1)->name == "Frank" &&
+      arr.at(1)->age == 9 
+    );
   }
 }
