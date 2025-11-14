@@ -535,6 +535,36 @@ public:
   }
 
   template <typename U>
+  T* insert(size_t pos, U &&item) {
+    if(pos > buffer_size || pos < 0) return nullptr;
+
+    if(active[pos]) {
+      buffer[pos] = item;
+    } else {
+      if(std::is_trivially_copyable<T>::value) {
+        memcpy(&(buffer[pos]), &item, sizeof(T));
+      } else {
+        new (&buffer[pos]) T(std::forward<U>(item));
+      }
+    }
+
+    return &(buffer[pos]);
+  }
+
+  template <typename... Args>
+  T* insert_new(size_t pos, Args&&... args) {
+    if(pos > buffer_size || pos < 0) return nullptr;
+
+    if(active[pos]) {
+      buffer[pos] = T(std::forward<Args>(args)...);
+    } else {
+      new (&buffer[pos]) T(std::forward<Args>(args)...);
+    }
+
+    return &(buffer[pos]);
+  }
+
+  template <typename U>
   T* push(U &&item) {
     if(_used == buffer_size) return nullptr;
 

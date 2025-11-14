@@ -278,6 +278,10 @@ and will be freed by the parent instead)
   Slower than `push()`, since it will check for empty slots.  
 - `T* fill_new(...args)` // Same as `push_new()`, but will attempt to fill empty  
   slots first.  
+- `T* insert(pos, item)` // Add new `item` to array by inserting it into `pos`.  
+  Slower than `push()`, since it will check for empty slots.  
+- `T* insert_new(pos, ...args)` // Same as `push_new()`, but will insert into  
+  `pos`.  
 - `void pop()` // Remove item at the end of array. Will also call destruct if  
   non-trivial T.  
 - `void erase(pos)` // Remove item at specific position. If in the middle or  

@@ -129,6 +129,12 @@ int main() {
       arr[3] == nullptr
     );
 
+    arr.insert(1, 900);
+
+    assert(
+      *arr[1] == 900
+    );
+
     arr.reset();
 
     assert(
@@ -243,6 +249,13 @@ int main() {
     assert(
       arr.at(1)->name == "Frank" &&
       arr.at(1)->age == 9 
+    );
+
+    arr.insert_new(1, "Tom", 60);
+
+    assert(
+      arr[1]->name == "Tom" &&
+      arr[1]->age == 60
     );
   }
 }
