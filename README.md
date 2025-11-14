@@ -205,47 +205,34 @@ __Arena__:
 (Destructor will free allocated memory, unless an arena is a child  
 in which case the underlying memory belongs to a parent, and will  
 be freed by the parent instead)  
-- `Arena Arena(i)` // Construct a new `Arena` instance of `i` bytes.   
-- `Arena Arena(parent, i)` // Construct a new child Arena` which is  
-   nested inside `parent`, child will be `i` bytes.  
-- `T* <T>allocate(i) // Allocate a chunk inside the arena with  
-  size: sizeof(T) * i  
-- `T* <T>allocate_new(args...) // Allocate a single item of type  
-  `T`, if it is a class `args` should be constructor parameters.  
-  Size: sizeof(T)  
-- `void* `allocate_raw(i)` // Allocate a raw chunk of `i` bytes/chars.  
-- `bool resize(i)` // Resize the arena to `i` bytes. If this isn't a  
-  child arena it will free+malloc a new buffer, otherwise it will  
-  grab a new allocation from it's parent without freeing the previous  
-  allocation. So in general you want to avoid resizing child arenas  
-  because it leads to wasted memory. Resizing will reset/clear data
-  in the pool.
-- `void reset()` // Reset offset to 0, freeing up all bytes in the arena
-  for re-use.  
-- `size_t size()` // Get the total bytes/chars allocated in the arena.  
-- `size_t used()` // Get the total bytes/chars used in the arena.  
+| Function Name                          | Description                                                                                     |
+|----------------------------------------|-------------------------------------------------------------------------------------------------|
+| `Arena Arena(i)`                       | Construct a new `Arena` instance of `i` bytes.                                                |
+| `Arena Arena(parent, i)`               | Construct a new child `Arena` which is nested inside `parent`, child will be `i` bytes.       |
+| `T* <T>allocate(i)`                   | Allocate a chunk inside the arena with size: sizeof(T) * i                                   |
+| `T* <T>allocate_new(args...)`         | Allocate a single item of type `T`, if it is a class `args` should be constructor parameters. Size: sizeof(T) |
+| `void* allocate_raw(i)`                | Allocate a raw chunk of `i` bytes/chars.                                                      |
+| `bool resize(i)`                       | Resize the arena to `i` bytes. If this isn't a child arena it will free+malloc a new buffer, otherwise it will grab a new allocation from its parent without freeing the previous allocation. So in general you want to avoid resizing child arenas because it leads to wasted memory. Resizing will reset/clear data in the pool. |
+| `void reset()`                         | Reset offset to 0, freeing up all bytes in the arena for re-use.                              |
+| `size_t size()`                        | Get the total bytes/chars allocated in the arena.                                             |
+| `size_t used()`                        | Get the total bytes/chars used in the arena.                                                 |
 
 __Pool__:  
 (Destructor will free allocated memory when pool owns it's own memory and  
 does not use an arena, otherwise if using an arena the arena will take care  
 of freeing memory in which case the underlying memory belongs to a parent,  
 and will be freed by the parent instead)  
-- `Pool<T> Pool(i)` // Construct a new `Pool` of type `T` with a count  
-  of `i`, allocated with malloc/free, allocation size: sizeof(T) * `i`  
-- `Pool<T> Pool(arena, i)` // Construct a new `Pool` of type `T` with a count  
-  of `i`, allocated in `arena`, allocation size: sizeof(T) * `i`  
-- `T* allocate(U &&item)` // Grab a single allocation from the pool and copy  
-  item into it.   
-- `T* allocate_new(args...)` // Grab a single allocation from the pool, if it  
-  is a class it will use `args` as constructor parameters.  
-- `void deallocate(allocate_ptr)`// Release a single allocation by providing  
-  a pointer that was received from a previous `allocate()`/`allocate_new()` call.  
-  Will also call destructor if non-trivial T.  
-- `void reset()` // Release all allocations, freeing up all usage for new  
-  allocations in the pool. Will also call destructor on all items if non-trivial T.   
-- `bool grow(i)` // Grow the pool by a count of `i` (on top of the current size).  
-- `size_t size()` // Get the total count (of type `T`) allocated in the pool.   
-- `size_t used()` // Get the used count (of type `T`)  
+| Function Name                     | Description                                                                                     |
+|-----------------------------------|-------------------------------------------------------------------------------------------------|
+| `Pool<T> Pool(i)`                 | Construct a new `Pool` of type `T` with a count of `i`, allocated with malloc/free, allocation size: sizeof(T) * `i` |
+| `Pool<T> Pool(arena, i)`          | Construct a new `Pool` of type `T` with a count of `i`, allocated in `arena`, allocation size: sizeof(T) * `i` |
+| `T* allocate(U &&item)`           | Grab a single allocation from the pool and copy item into it.                                  |
+| `T* allocate_new(args...)`        | Grab a single allocation from the pool, if it is a class it will use `args` as constructor parameters. |
+| `void deallocate(allocate_ptr)`   | Release a single allocation by providing a pointer that was received from a previous `allocate()`/`allocate_new()` call. Will also call destructor if non-trivial T. |
+| `void reset()`                    | Release all allocations, freeing up all usage for new allocations in the pool. Will also call destructor on all items if non-trivial T. |
+| `bool grow(i)`                    | Grow the pool by a count of `i` (on top of the current size).                                 |
+| `size_t size()`                   | Get the total count (of type `T`) allocated in the pool.                                      |
+| `size_t used()`                   | Get the used count (of type `T`)                                                               |
 
 In general, if allocate* calls fail, they will return `nullptr`, which  
 means you can check for that to see if it has failed. A nullptr usually  
@@ -261,41 +248,24 @@ __SArray__: (Stretchy Array)
 does not use an arena, otherwise if using an arena the arena will take care  
 of freeing memory in which case the underlying memory belongs to a parent,  
 and will be freed by the parent instead)  
-- `SArray<T> SArray(i)` // Construct a new `SArray` of type `T` with a count  
-  of `i`, allocated with malloc/free, allocation size:  
-  (sizeof(T) * i) + (sizeof(bool) * i)  
-- `T* at(pos)` // Get item at position. Will return `nullptr` if empty slot.  
-- `T* operator[]` // Array accessor s\_array[2], works the same as `at(2)`.  
-- `T* first()` // Get the first item in the array. `nullptr` if array is empty.  
-- `T* last()` // Get the last item in the array. `nullptr` if  array is empty.  
-- `T* push(item)` // Push new item to end of array. Will return `nullptr` if  
-  it fails because the array is full.  
-- `T* push_new(...args)` // Construct new item at end of array, by directly  
-  specifying constructor params in this method. Will return `nullptr` if full.  
-- `T* fill(item)` // Add new item to array by first attempting to fill any  
-  empty slots in the middle/beginning of the array, or at the end. `nullptr`   
-  if full.  
-  Slower than `push()`, since it will check for empty slots.  
-- `T* fill_new(...args)` // Same as `push_new()`, but will attempt to fill empty  
-  slots first.  
-- `T* insert(pos, item)` // Add new `item` to array by inserting it into `pos`.  
-  Slower than `push()`, since it will check for empty slots.  
-- `T* insert_new(pos, ...args)` // Same as `push_new()`, but will insert into  
-  `pos`.  
-- `void pop()` // Remove item at the end of array. Will also call destruct if  
-  non-trivial T.  
-- `void erase(pos)` // Remove item at specific position. If in the middle or  
-  beginning, there will be an empty slot at that position, since it does not  
-  automatically cover holes by moving items forward. Will also call destruct if  
-  non-trivial T.  
-- `void erase_ptr(ptr)` // Same as `erase()`, but you provide a pointer to an  
-  item instead of a position.  
-- `void reset()` // Clear/empty all items. Will also call destruct on all items  
-  if non-trivial T.  
-- `void compact()` // Get rid of all empty slots from beginning/middle by  
-  moving items forward.  
-- `bool resize(size)` // Change the allocated size of the array. Will automatically  
-  run `compact()` before resizing starts. If shrinking the size, items past  
-  the new maximum size will be truncated.  
-- `size_t size()` // Get the total count (of type `T`) allocated in the pool.   
-- `size_t used()` // Get the used count (of type `T`)  
+| Function Name                     | Description                                                                                          |
+|-----------------------------------|------------------------------------------------------------------------------------------------------|
+| `SArray<T> SArray(i)`             | Construct a new `SArray` of type `T` with a count of `i`, allocated with malloc/free.              |
+| `T* at(pos)`                      | Get item at position. Will return `nullptr` if empty slot.                                         |
+| `T* operator[]`                   | Array accessor s_array[2], works the same as `at(2)`.                                             |
+| `T* first()`                      | Get the first item in the array. `nullptr` if array is empty.                                     |
+| `T* last()`                       | Get the last item in the array. `nullptr` if array is empty.                                      |
+| `T* push(item)`                   | Push new item to end of array. Will return `nullptr` if it fails because the array is full.        |
+| `T* push_new(...args)`            | Construct new item at end of array, by directly specifying constructor params in this method.       |
+| `T* fill(item)`                   | Add new item to array by attempting to fill any empty slots. `nullptr` if full.                    |
+| `T* fill_new(...args)`            | Same as `push_new()`, but will attempt to fill empty slots first.                                  |
+| `T* insert(pos, item)`            | Add new `item` to array by inserting it into `pos`. Slower than `push()`.                          |
+| `T* insert_new(pos, ...args)`     | Same as `push_new()`, but will insert into `pos`.                                                  |
+| `void pop()`                      | Remove item at the end of array. Will also call destruct if non-trivial T.                         |
+| `void erase(pos)`                 | Remove item at specific position. Will leave an empty slot.                                        |
+| `void erase_ptr(ptr)`             | Same as `erase()`, but you provide a pointer to an item instead of a position.                     |
+| `void reset()`                    | Clear/empty all items. Will also call destruct on all items if non-trivial T.                      |
+| `void compact()`                  | Get rid of all empty slots by moving items forward.                                                |
+| `bool resize(size)`               | Change the allocated size of the array. Will run `compact()` before resizing.                      |
+| `size_t size()`                   | Get the total count (of type `T`) allocated in the pool.                                           |
+| `size_t used()`                   | Get the used count (of type `T`).                                                                   |
