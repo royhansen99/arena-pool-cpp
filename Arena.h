@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.0.3
+ * Version: 0.0.4
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -728,7 +728,10 @@ public:
         }
       }
 
-      if(_used > size) _used = size;
+      if(_used > size) {
+        _used = size;
+        _last = size;
+      }
 
       active = new_active;
       buffer_size = size;
