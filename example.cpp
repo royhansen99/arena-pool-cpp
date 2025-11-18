@@ -1,3 +1,5 @@
+// Compile: g++ -std=c++11 -fsanitize=address example.cpp
+
 #include "./Arena.h"
 #include <iostream>
 
@@ -112,6 +114,11 @@ int main() {
   // skip empty slots.
   for(auto &it : array) {
     std::cout << "Value: " << it << "\n";
+  }
+
+  // Reverse iteration, will automatically skip empty slots.
+  for (auto it = array.rbegin(); it != array.rend(); ++it) {
+    std::cout << "Value: " << *it << "\n";
   }
 
   // When the parent `arena` goes out of scope,

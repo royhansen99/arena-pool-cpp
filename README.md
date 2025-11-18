@@ -160,6 +160,13 @@ int main() {
   for(auto &it : array) {
     std::cout << "Value: " << it << "\n";
   }
+  // If you do a manual increment/decrement for-loop instead,
+  // make sure you check for empty slots by comparing for `nullptr`.
+
+  // Reverse iteration, will automatically skip empty slots.
+  for (auto it = array.rbegin(); it != array.rend(); ++it) {
+    std::cout << "Value: " << *it << "\n";
+  }
 
   // When the parent `arena` goes out of scope,
   // the destructor will free() the allocated
