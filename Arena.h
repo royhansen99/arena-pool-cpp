@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.0.4
+ * Version: 0.0.5
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -352,33 +352,41 @@ private:
 
 public:
   class iterator {
-    T* ptr;
-    bool* active;
-    T* end;
-    size_t i;
+    T* _begin;
+    T* _end;
+    bool* _active;
+    T* it;
+    bool _reverse;
   public:
-    explicit iterator(T* _ptr, bool* a, T* e, bool empty) :
-      ptr(_ptr),
-      active(a),
-      end(e),
-      i(0)
-    {
-      if(!empty) {
-        while((ptr + i) != end && !active[i])
-          i++;
-      }
-    }
-    T& operator*() const { return ptr[i]; }
-    iterator& operator++() {
-      i++;
+    explicit iterator(T* begin, T* end, bool* active, bool reverse = false):
+      _begin(begin), _end(end), _active(active), it(begin),
+      _reverse(reverse) { }
 
-      while((ptr + i) != end && !active[i]) {
-        i++;
+    T& operator*() const { return *it; }
+
+    bool operator!=(const iterator& other) const { return it != other.it; }
+
+    iterator& operator++() {
+      if(_reverse) {
+        it--;
+        _active--;
+
+        while(it != _end && !*_active) {
+          it--;
+          _active--;
+        }
+      } else {
+        it++;
+        _active++;
+
+        while(it != _end && !*_active) {
+          it++;
+          _active++;
+        }
       }
 
       return *this;
     }
-    bool operator!=(const iterator& other) const { return (ptr + i) != other.ptr; }
   };
 
   SArray(size_t size) :
@@ -430,20 +438,46 @@ public:
     return &(buffer[i]);
   }
 
-  iterator begin() {
-    return iterator(buffer, active, &(buffer[_last]), _used == 0);
-  }
-
   const iterator begin() const {
-    return iterator(buffer, active, &(buffer[_last]), _used == 0);
+    T* first = buffer;
+    bool* first_active = active;
+    for(size_t i = 0; i < buffer_size; i++) {
+      if(active[i]) {
+        first = &(buffer[i]);
+        first_active = &(active[i]);
+        break;
+      }
+    }
+
+    return iterator(first, &(buffer[_last]), first_active);
   }
 
-  iterator end() {
-    return iterator(&(buffer[_last]), active, &(buffer[_last]), true);
+  const iterator rbegin() const {
+    T* last = buffer;
+    for(size_t i = 0; i < buffer_size; i++) {
+      if(active[i]) {
+        last = &(buffer[i]);
+        break;
+      }
+    }
+
+    return iterator(&(buffer[_last - 1]), last - 1, &(active[_last - 1]), true);
   }
 
   const iterator end() const {
-    return iterator(&(buffer[_last]), active, &(buffer[_last]), true);
+    return iterator(&(buffer[_last]), &(buffer[_last]), &(active[_last - 1]));
+  }
+
+  const iterator rend() const {
+    T* last = buffer;
+    for(size_t i = 0; i < buffer_size; i++) {
+      if(active[i]) {
+        last = &(buffer[i]);
+        break;
+      }
+    }
+
+    return iterator(last - 1, last - 1, active);
   }
 
   T* first() {
@@ -616,7 +650,7 @@ public:
 
     if(!std::is_trivial<T>::value) buffer[pos].~T();
 
-    maybe_set_last(pos);
+    maybe_set_last(pos + 1);
   }
 
   void reset() {

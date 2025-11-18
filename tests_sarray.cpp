@@ -143,6 +143,54 @@ int main() {
   }
 
   // ------------------------------------------------------------------
+  // Iteration 
+  // ------------------------------------------------------------------
+  {
+    SArray<int> arr(6);
+    arr.push(0);
+    arr.push(1);
+    arr.push(2);
+    arr.push(3);
+    arr.push(4);
+    arr.push(5);
+
+    std::string test = "";
+
+    for(const auto &it : arr) {
+      test += it + '0';
+    }
+
+    assert(test == "012345");
+
+    // Reverse
+    test = "";
+    for (auto it = arr.rbegin(); it != arr.rend(); ++it) {
+      test += *it + '0';
+    }
+
+    assert(test == "543210");
+
+    arr.erase(0);
+    arr.erase(3);
+    arr.erase(5);
+
+    test = "";
+    for(const auto &it : arr) {
+      test += it + '0';
+    }
+
+    assert(test == "124");
+
+    // Reverse
+    test = "";
+    for (auto it = arr.rbegin(); it != arr.rend(); ++it) {
+      test += *it + '0';
+    }
+
+    assert(test == "421");
+  }
+
+  // ------------------------------------------------------------------
   // Usage with Arena 
   // ------------------------------------------------------------------
   {
