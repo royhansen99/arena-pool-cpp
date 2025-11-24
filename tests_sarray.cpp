@@ -1,4 +1,4 @@
-// COMPILE: g++ -std=c++11 -fsanitize=address tests_sarray.cpp
+// COMPILE: g++ -std=c++11 -Wall -fsanitize=address tests_sarray.cpp
 
 #include "./Arena.h"
 #include <cassert>

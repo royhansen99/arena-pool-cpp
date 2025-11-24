@@ -1,4 +1,4 @@
-// COMPILE: g++ -std=c++11 -fsanitize=address tests_pool.cpp
+// COMPILE: g++ -std=c++11 -Wall -fsanitize=address tests_pool.cpp
 
 #include "./Arena.h"
 #include <cassert>
