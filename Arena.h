@@ -26,13 +26,13 @@ private:
   size_t offset;
 
 public:
-  Arena(size_t size) :
+  Arena(const size_t size) :
     parent(nullptr),
     buffer(static_cast<char*>(malloc(size))),
     total_size(size),
     offset(0) {}
 
-  Arena(Arena &parent, size_t size) :
+  Arena(Arena &parent, const size_t size) :
     parent(&parent),
     buffer(static_cast<char*>(parent.allocate_raw(size))),
     total_size(size),
@@ -52,7 +52,7 @@ public:
   }
 
   template <typename T>
-  T* allocate(size_t count = 1) {
+  T* allocate(const size_t count = 1) {
     if(!buffer) return nullptr;
 
     size_t alignment = alignof(T);
@@ -61,8 +61,8 @@ public:
     return static_cast<T*>(allocate_raw(size, alignment));
   }
 
-  void* allocate_raw(size_t size,
-    size_t alignment = alignof(std::max_align_t)
+  void* allocate_raw(const size_t size,
+    const size_t alignment = alignof(std::max_align_t)
   ) {
     uintptr_t current_addr = reinterpret_cast<uintptr_t>(buffer) + offset;
     size_t padding = (alignment - (current_addr % alignment)) % alignment;
@@ -79,7 +79,7 @@ public:
     return static_cast<void*>(new_allocation);
   }
 
-  bool resize(size_t size) {
+  bool resize(const size_t size) {
     char* new_buffer = static_cast<char*>(
         parent ? parent->allocate_raw(size) :
         malloc(size)
@@ -151,7 +151,7 @@ private:
   }
 
 public:
-  Pool(Arena &_arena, size_t pool_size) :
+  Pool(Arena &_arena, const size_t pool_size) :
     arena(&_arena),
     buffers(arena->allocate<PoolBuffer<T>>()),
     buffers_size(1),
@@ -163,7 +163,7 @@ public:
     reset();
   }
 
-  Pool(size_t pool_size) :
+  Pool(const size_t pool_size) :
     arena(nullptr),
     buffers(static_cast<PoolBuffer<T>*>(malloc(sizeof(PoolBuffer<T>)))),
     buffers_size(1),
@@ -270,7 +270,7 @@ public:
     _used--;
   }
 
-  bool grow(size_t size) {
+  bool grow(const size_t size) {
     PoolItem<T>* new_buffer = nullptr;
     size_t new_count = buffers_size + 1;
 
@@ -338,7 +338,7 @@ private:
   size_t _used;
   size_t _last;
 
-  void maybe_set_last(size_t pos) {
+  void maybe_set_last(const size_t pos) {
     if(_last != pos) return;
 
     _last = 0;
@@ -389,7 +389,7 @@ public:
     }
   };
 
-  SArray(size_t size) :
+  SArray(const size_t size) :
     arena(nullptr),
     buffer(static_cast<T*>(malloc(sizeof(T) * size))),
     active(static_cast<bool*>(malloc(sizeof(bool) * size))),
@@ -402,7 +402,7 @@ public:
     if(!active && buffer) free(buffer);
   }
 
-  SArray(Arena &_arena, size_t size) :
+  SArray(Arena &_arena, const size_t size) :
     arena(&_arena),
     buffer(arena->allocate<T>(size)),
     active(arena->allocate<bool>(size)),
@@ -428,12 +428,12 @@ public:
     }
   }
 
-  T* operator[](size_t i) {
+  T* operator[](const size_t i) {
     if(!_used || i >= buffer_size ||  !active[i]) return nullptr;
     return &(buffer[i]);
   }
 
-  const T* operator[](size_t i) const {
+  const T* operator[](const size_t i) const {
     if(!_used || i >= buffer_size ||  !active[i]) return nullptr;
     return &(buffer[i]);
   }
@@ -512,13 +512,13 @@ public:
     return &(buffer[_last - 1]);
   }
 
-  T* at(size_t pos) {
+  T* at(const size_t pos) {
     if(!_used || pos >= buffer_size ||  !active[pos]) return nullptr;
 
     return &(buffer[pos]);
   }
 
-  const T* at(size_t pos) const {
+  const T* at(const size_t pos) const {
     if(!_used || pos >= buffer_size ||  !active[pos]) return nullptr;
 
     return &(buffer[pos]);
@@ -569,7 +569,7 @@ public:
   }
 
   template <typename U>
-  T* insert(size_t pos, U &&item) {
+  T* insert(const size_t pos, U &&item) {
     if(pos > buffer_size || pos < 0) return nullptr;
 
     if(active[pos]) {
@@ -586,7 +586,7 @@ public:
   }
 
   template <typename... Args>
-  T* insert_new(size_t pos, Args&&... args) {
+  T* insert_new(const size_t pos, Args&&... args) {
     if(pos > buffer_size || pos < 0) return nullptr;
 
     if(active[pos]) {
@@ -638,11 +638,11 @@ public:
     maybe_set_last(_last);
   }
 
-  void erase_ptr(T *item) {
+  void erase_ptr(const T *item) {
     erase(((size_t)item - (size_t)buffer) / sizeof(T));
   }
 
-  void erase(size_t pos) {
+  void erase(const size_t pos) {
     if(pos <  0 || pos >= buffer_size || !active[pos]) return;
 
     _used--;
@@ -691,7 +691,7 @@ public:
     if(target != -1) _last = target;
   }
 
-  bool resize(size_t size) {
+  bool resize(const size_t size) {
     compact();
 
     if(size == buffer_size) return true;
