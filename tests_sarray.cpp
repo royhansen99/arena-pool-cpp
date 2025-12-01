@@ -135,6 +135,18 @@ int main() {
       *arr[1] == 900
     );
 
+    arr.resize(20);
+
+    assert(
+      arr.size() == 20
+    );
+
+    arr.shrink_to_fit();
+
+    assert(
+      arr.size() == 3
+    );
+
     arr.reset();
 
     assert(

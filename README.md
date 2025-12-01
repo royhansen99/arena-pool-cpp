@@ -274,5 +274,6 @@ and will be freed by the parent instead)
 | `void reset()`                    | Clear/empty all items. Will also call destruct on all items if non-trivial T.                      |
 | `void compact()`                  | Get rid of all empty slots by moving items forward.                                                |
 | `bool resize(size)`               | Change the allocated size of the array. Will run `compact()` before resizing.                      |
+| `bool shrink_to_fit()`            | Shrink size to fit usage(), uses resize() to achieve this. If usage() == 0, will resize to 1.      |
 | `size_t size()`                   | Get the total count (of type `T`) allocated in the pool.                                           |
 | `size_t used()`                   | Get the used count (of type `T`).                                                                   |

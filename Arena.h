@@ -776,6 +776,14 @@ public:
     return false;
   }
 
+  bool shrink_to_fit() {
+    if(_used < buffer_size && buffer_size > 1) {
+      return resize(_used ? _used : 1);
+    }
+
+    return 0;
+  }
+
   size_t used() const {
     return _used;
   }
