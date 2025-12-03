@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.0.5
+ * Version: 0.0.6
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -17,6 +17,8 @@
 #include <type_traits>
 #include <cstring>
 #include <new>
+
+#define ARENA_POOL_CPP 1
 
 class Arena {
 private:
