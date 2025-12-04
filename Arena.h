@@ -333,7 +333,7 @@ public:
 template <typename T>
 class SArray {
 private: 
-  Arena* arena;
+  Arena* _arena;
   T* buffer;
   bool* active;
   size_t buffer_size;
@@ -391,30 +391,55 @@ public:
     }
   };
 
-  SArray(const size_t size) :
-    arena(nullptr),
-    buffer(static_cast<T*>(malloc(sizeof(T) * size))),
-    active(static_cast<bool*>(malloc(sizeof(bool) * size))),
-    buffer_size(size),
+  SArray(const size_t size = 0) :
+    _arena(nullptr),
+    buffer(nullptr),
+    active(nullptr),
+    buffer_size(0),
     _used(0),
     _last(0)
   {
-    if(!buffer || !active) buffer_size = 0;
-    if(!buffer && active) free(active);
-    if(!active && buffer) free(buffer);
+    init(size);
   }
 
-  SArray(Arena &_arena, const size_t size) :
-    arena(&_arena),
-    buffer(arena->allocate<T>(size)),
-    active(arena->allocate<bool>(size)),
-    buffer_size(size),
-    _used(0),
-    _last(0)
-  {
-    if(!buffer || !active) buffer_size = 0;
-    if(!buffer && active) free(active);
-    if(!active && buffer) free(buffer);
+  SArray(Arena &__arena, const size_t size) : SArray(0) {
+    init(__arena, size);
+  }
+
+  void init(const size_t size) {
+    if(!size || _arena || buffer_size) return;
+
+    buffer = static_cast<T*>(malloc(sizeof(T) * size));
+
+    if(buffer)
+      active = static_cast<bool*>(malloc(sizeof(bool) * size));
+
+    if(!buffer || !active) {
+      if(buffer) free(buffer);
+      if(active) free(active);
+
+      return;
+    }
+
+    buffer_size = size;
+  }
+
+  void init(Arena &__arena, const size_t size) {
+    if(!size || _arena || buffer_size) return;
+
+    _arena = &__arena;
+
+    auto* new_buffer = _arena->allocate<T>(size);
+    bool* new_active = nullptr;
+
+    if(new_buffer) new_active = _arena->allocate<bool>(size);
+
+    if(new_active) {
+      buffer = new_buffer;
+      active = new_active;
+
+      buffer_size = size;
+    }
   }
 
   ~SArray() {
@@ -424,7 +449,7 @@ public:
       }
     }
 
-    if(!arena && buffer_size) {
+    if(!_arena && buffer_size) {
       free(buffer);
       free(active);
     }
@@ -456,6 +481,10 @@ public:
 
   const iterator rbegin() const {
     T* last = buffer;
+
+    if(!buffer_size)
+      return iterator(last, last, active, true);
+
     for(size_t i = 0; i < buffer_size; i++) {
       if(active[i]) {
         last = &(buffer[i]);
@@ -467,11 +496,18 @@ public:
   }
 
   const iterator end() const {
+    if(!buffer_size)
+      return iterator(buffer, buffer, active);
+
     return iterator(&(buffer[_last]), &(buffer[_last]), &(active[_last - 1]));
   }
 
   const iterator rend() const {
     T* last = buffer;
+
+    if(!buffer_size)
+      return iterator(buffer, buffer, active);
+
     for(size_t i = 0; i < buffer_size; i++) {
       if(active[i]) {
         last = &(buffer[i]);
@@ -572,7 +608,7 @@ public:
 
   template <typename U>
   T* insert(const size_t pos, U &&item) {
-    if(pos > buffer_size || pos < 0) return nullptr;
+    if(!buffer_size || pos > buffer_size || pos < 0) return nullptr;
 
     if(active[pos]) {
       buffer[pos] = item;
@@ -589,7 +625,7 @@ public:
 
   template <typename... Args>
   T* insert_new(const size_t pos, Args&&... args) {
-    if(pos > buffer_size || pos < 0) return nullptr;
+    if(!buffer_size || pos > buffer_size || pos < 0) return nullptr;
 
     if(active[pos]) {
       buffer[pos] = T(std::forward<Args>(args)...);
@@ -645,7 +681,7 @@ public:
   }
 
   void erase(const size_t pos) {
-    if(pos <  0 || pos >= buffer_size || !active[pos]) return;
+    if(!buffer_size || pos <  0 || pos >= buffer_size || !active[pos]) return;
 
     _used--;
     active[pos] = false;
@@ -703,13 +739,13 @@ public:
 
     size_t copy_size = size > buffer_size ? buffer_size : size;
 
-    if(arena) {
+    if(_arena) {
       if(size < buffer_size) return false;
 
-      new_buffer = arena->allocate<T>(size);
+      new_buffer = _arena->allocate<T>(size);
 
       if(new_buffer)
-        new_active = arena->allocate<bool>(size);
+        new_active = _arena->allocate<bool>(size);
 
       if(new_buffer && new_active) {
         if(std::is_trivially_copyable<T>::value) {
