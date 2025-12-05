@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.0.6
+ * Version: 0.0.7
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -331,9 +331,8 @@ public:
 };
 
 template <typename T>
-class SArray {
-private: 
-  Arena* _arena;
+class ISArray {
+protected: 
   T* buffer;
   bool* active;
   size_t buffer_size;
@@ -391,68 +390,45 @@ public:
     }
   };
 
-  SArray(const size_t size = 0) :
-    _arena(nullptr),
+  ISArray() :
     buffer(nullptr),
     active(nullptr),
     buffer_size(0),
     _used(0),
     _last(0)
-  {
-    init(size);
+  { }
+
+  ISArray& operator=(const std::initializer_list<T> list) {
+    if(!buffer_size) return *this;
+
+    if(_used) reset();
+
+    for(const auto item : list)
+      if(!push(item)) break;
+
+    return *this;
   }
 
-  SArray(Arena &__arena, const size_t size) : SArray(0) {
-    init(__arena, size);
+  ISArray& operator=(const std::initializer_list<T>* list) {
+    if(!buffer_size) return *this;
+
+    if(_used) reset();
+
+    for(const auto item : *list)
+      if(!push(item)) break;
+
+    return *this;
   }
 
-  void init(const size_t size) {
-    if(!size || _arena || buffer_size) return;
+  ISArray& operator=(const ISArray& other) {
+    if(!buffer_size) return *this;
 
-    buffer = static_cast<T*>(malloc(sizeof(T) * size));
+    if(_used) reset();
 
-    if(buffer)
-      active = static_cast<bool*>(malloc(sizeof(bool) * size));
+    for(const auto item : other)
+      if(!push(item)) break;
 
-    if(!buffer || !active) {
-      if(buffer) free(buffer);
-      if(active) free(active);
-
-      return;
-    }
-
-    buffer_size = size;
-  }
-
-  void init(Arena &__arena, const size_t size) {
-    if(!size || _arena || buffer_size) return;
-
-    _arena = &__arena;
-
-    auto* new_buffer = _arena->allocate<T>(size);
-    bool* new_active = nullptr;
-
-    if(new_buffer) new_active = _arena->allocate<bool>(size);
-
-    if(new_active) {
-      buffer = new_buffer;
-      active = new_active;
-
-      buffer_size = size;
-    }
-  }
-
-  ~SArray() {
-    if(!std::is_trivial<T>::value) {
-      for(size_t i = 0; i < buffer_size; i++) {
-        if(active[i]) buffer[i].~T();
-      }
-    }
-
-    if(!_arena && buffer_size) {
-      free(buffer);
-      free(active);
-    }
+    return *this;
   }
 
   T* operator[](const size_t i) {
@@ -729,99 +705,6 @@ public:
     if(target != -1) _last = target;
   }
 
-  bool resize(const size_t size) {
-    compact();
-
-    if(size == buffer_size) return true;
-
-    T* new_buffer = nullptr;
-    bool *new_active = nullptr;
-
-    size_t copy_size = size > buffer_size ? buffer_size : size;
-
-    if(_arena) {
-      if(size < buffer_size) return false;
-
-      new_buffer = _arena->allocate<T>(size);
-
-      if(new_buffer)
-        new_active = _arena->allocate<bool>(size);
-
-      if(new_buffer && new_active) {
-        if(std::is_trivially_copyable<T>::value) {
-          memcpy(new_buffer, buffer, sizeof(T) * copy_size);
-        } else {
-          for(size_t i = 0; i < buffer_size; i++) {
-            if(!active[i]) break;
-
-            if(i < copy_size)
-              new (&new_buffer[i]) T(std::move(buffer[i]));
-
-            buffer[i].~T();
-          }
-        }
-
-        memcpy(new_active, active, sizeof(bool) * copy_size);
-      } else {
-        new_buffer = nullptr;
-        new_active = nullptr;
-      }
-    } else {
-      if(std::is_trivially_copyable<T>::value) {
-        new_buffer = static_cast<T*>(realloc(buffer, sizeof(T) * size));
-      } else {
-        new_buffer = static_cast<T*>(malloc(sizeof(T) * size));
-
-        if(new_buffer) {
-          for(size_t i = 0; i < buffer_size; i++) {
-              if(!active[i]) break;
-
-              if(i < copy_size)
-                new (&new_buffer[i]) T(std::move(buffer[i]));
-
-              buffer[i].~T();
-          }
-
-          free(buffer);
-        }
-      }
-
-      if(new_buffer) {
-        new_active = static_cast<bool*>(realloc(active, sizeof(bool) * size));
-      }
-    }
-
-    if(new_buffer) buffer = new_buffer;
-
-    if(new_active) {
-      if(size > buffer_size) {
-        for(size_t i = copy_size; i < size; i++) {
-          new_active[i] = false;
-        }
-      }
-
-      if(_used > size) {
-        _used = size;
-        _last = size;
-      }
-
-      active = new_active;
-      buffer_size = size;
-
-      return true;
-    }
-
-    return false;
-  }
-
-  bool shrink_to_fit() {
-    if(_used < buffer_size && buffer_size > 1) {
-      return resize(_used ? _used : 1);
-    }
-
-    return 0;
-  }
-
   size_t used() const {
     return _used;
   }
@@ -832,5 +715,222 @@ public:
 
   bool empty() const {
     return _used == 0;
+  }
+};
+
+
+template <typename T, size_t N>
+class SArrayFixed : public ISArray<T> {
+  char static_buffer[sizeof(T) * N];
+  bool static_active[N];
+
+public:
+  using ISArray<T>::operator=;
+
+  SArrayFixed() : ISArray<T>() {
+    this->buffer = reinterpret_cast<T*>(static_buffer);
+    this->active = static_active;
+    this->buffer_size = N;
+  }
+
+  SArrayFixed(const std::initializer_list<T> list) : SArrayFixed() {
+    this->operator=(&list);
+  }
+
+  SArrayFixed(const ISArray<T>& other) : SArrayFixed() {
+    this->operator=(other);
+  }
+
+  ~SArrayFixed() {
+    if(!std::is_trivial<T>::value) {
+      for(size_t i = 0; i < this->buffer_size; i++) {
+        if(this->active[i]) this->buffer[i].~T();
+      }
+    }
+  }
+};
+
+template <typename T>
+class SArray : public ISArray<T> {
+  Arena* _arena;
+
+public:
+  using ISArray<T>::operator=;
+
+  SArray(const size_t size = 0) : ISArray<T>(), _arena(nullptr) {
+    init(size);
+  }
+
+  SArray(const size_t size, const std::initializer_list<T> list) :
+    SArray(size)
+  {
+    this->operator=(&list);
+  }
+
+  SArray(const size_t size, const ISArray<T>& other) :
+    SArray(size)
+  {
+    this->operator=(other);
+  }
+
+  SArray(Arena &__arena, const size_t size) : ISArray<T>(), _arena(nullptr) {
+    init(__arena, size);
+  }
+
+  SArray(Arena &__arena, const size_t size, const std::initializer_list<T> list) :
+    SArray(__arena, size) 
+  {
+    this->operator=(&list);
+  }
+
+  SArray(Arena &__arena, const size_t size, const ISArray<T>& other) :
+    SArray(__arena, size) 
+  {
+    this->operator=(other);
+  }
+
+  ~SArray() {
+    if(!std::is_trivial<T>::value) {
+      for(size_t i = 0; i < this->buffer_size; i++) {
+        if(this->active[i]) this->buffer[i].~T();
+      }
+    }
+
+    if(!_arena && this->buffer_size) {
+      free(this->buffer);
+      free(this->active);
+    }
+  }
+
+  void init(const size_t size) {
+    if(!size || _arena || this->buffer_size) return;
+
+    this->buffer = static_cast<T*>(malloc(sizeof(T) * size));
+
+    if(this->buffer)
+      this->active = static_cast<bool*>(malloc(sizeof(bool) * size));
+
+    if(!this->buffer || !this->active) {
+      if(this->buffer) free(this->buffer);
+      if(this->active) free(this->active);
+
+      this->buffer = nullptr;
+      this->active = nullptr;
+
+      return;
+    }
+
+    this->buffer_size = size;
+  }
+
+  void init(Arena &__arena, const size_t size) {
+    if(!size || _arena || this->buffer_size) return;
+
+
+    auto* new_buffer = __arena.allocate<T>(size);
+    bool* new_active = nullptr;
+
+    if(new_buffer) new_active = __arena.allocate<bool>(size);
+
+    if(new_active) {
+      _arena = &__arena;
+      this->buffer = new_buffer;
+      this->active = new_active;
+
+      this->buffer_size = size;
+    }
+  }
+
+  bool resize(const size_t size) {
+    this->compact();
+
+    if(size == this->buffer_size) return true;
+
+    T* new_buffer = nullptr;
+    bool *new_active = nullptr;
+
+    size_t copy_size = size > this->buffer_size ? this->buffer_size : size;
+
+    if(_arena) {
+      if(size < this->buffer_size) return false;
+
+      new_buffer = _arena->allocate<T>(size);
+
+      if(new_buffer)
+        new_active = _arena->allocate<bool>(size);
+
+      if(new_buffer && new_active) {
+        if(std::is_trivially_copyable<T>::value) {
+          memcpy(new_buffer, this->buffer, sizeof(T) * copy_size);
+        } else {
+          for(size_t i = 0; i < this->buffer_size; i++) {
+            if(!this->active[i]) break;
+
+            if(i < copy_size)
+              new (&new_buffer[i]) T(std::move(this->buffer[i]));
+
+            this->buffer[i].~T();
+          }
+        }
+
+        memcpy(new_active, this->active, sizeof(bool) * copy_size);
+      } else {
+        new_buffer = nullptr;
+        new_active = nullptr;
+      }
+    } else {
+      if(std::is_trivially_copyable<T>::value) {
+        new_buffer = static_cast<T*>(realloc(this->buffer, sizeof(T) * size));
+      } else {
+        new_buffer = static_cast<T*>(malloc(sizeof(T) * size));
+
+        if(new_buffer) {
+          for(size_t i = 0; i < this->buffer_size; i++) {
+              if(!this->active[i]) break;
+
+              if(i < copy_size)
+                new (&new_buffer[i]) T(std::move(this->buffer[i]));
+
+              this->buffer[i].~T();
+          }
+
+          free(this->buffer);
+        }
+      }
+
+      if(new_buffer) {
+        new_active = static_cast<bool*>(realloc(this->active, sizeof(bool) * size));
+      }
+    }
+
+    if(new_buffer) this->buffer = new_buffer;
+
+    if(new_active) {
+      if(size > this->buffer_size) {
+        for(size_t i = copy_size; i < size; i++) {
+          new_active[i] = false;
+        }
+      }
+
+      if(this->_used > size) {
+        this->_used = size;
+        this->_last = size;
+      }
+
+      this->active = new_active;
+      this->buffer_size = size;
+
+      return true;
+    }
+
+    return false;
+  }
+
+  bool shrink_to_fit() {
+    if(this->_used < this->buffer_size && this->buffer_size > 1) {
+      return resize(this->_used ? this->_used : 1);
+    }
+
+    return 0;
   }
 };

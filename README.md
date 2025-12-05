@@ -276,4 +276,15 @@ and will be freed by the parent instead)
 | `bool resize(size)`               | Change the allocated size of the array. Will run `compact()` before resizing.                      |
 | `bool shrink_to_fit()`            | Shrink size to fit usage(), uses resize() to achieve this. If usage() == 0, will resize to 1.      |
 | `size_t size()`                   | Get the total count (of type `T`) allocated in the pool.                                           |
-| `size_t used()`                   | Get the used count (of type `T`).                                                                   |
+| `size_t used()`                   | Get the used count (of type `T`).                                                                  |
+| `bool empty()`                    | Check if empty.                                                                                    |
+
+
+__SArrayFixed__: (Fixed size array)  
+Mostly the same as SArray, except that it is fixed size.  
+
+`SArrayFixed<T, size>`  
+
+These method are not available on `SArrayFixed`, since it is fixed-size:  
+- resize()  
+- shrink\_to\_fit()  

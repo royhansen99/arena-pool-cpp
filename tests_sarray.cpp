@@ -19,6 +19,16 @@ int main() {
       arr.empty() == true
     );
 
+    arr = {1,2};
+
+    assert(
+      arr.used() == 2 &&
+      *arr[0] == 1 &&
+      *arr[1] == 2
+    );
+
+    arr = {};
+
     auto* p1 = arr.push_new(1);
     auto* p2 = arr.push_new(2);
     int three = 3;
@@ -151,6 +161,42 @@ int main() {
 
     assert(
       arr.used() == 0
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Constuctor assignment 
+  // ------------------------------------------------------------------
+  {
+    SArray<int> arr(3, {1,2,3});
+    
+    assert(
+      arr.size() == 3 &&
+      arr.used() == 3 &&
+      *arr[0] == 1 &&
+      *arr[1] == 2 &&
+      *arr[2] == 3
+    );
+
+    Arena arena(32);
+    SArray<int> arena_arr(arena, 3, {1,2,3});
+
+    assert(
+      arena_arr.size() == 3 &&
+      arena_arr.used() == 3 &&
+      *arena_arr[0] == 1 &&
+      *arena_arr[1] == 2 &&
+      *arena_arr[2] == 3
+    );
+
+    SArrayFixed<int, 3> fixed({1,2,3});
+
+    assert(
+      fixed.size() == 3 &&
+      fixed.used() == 3 &&
+      *fixed[0] == 1 &&
+      *fixed[1] == 2 && 
+      *fixed[2] == 3 
     );
   }
 
@@ -316,6 +362,81 @@ int main() {
     assert(
       arr[1]->name == "Tom" &&
       arr[1]->age == 60
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // SArrayFixed usage
+  // ------------------------------------------------------------------
+  {
+    SArrayFixed<int, 10> fixed = {1,2,3};
+
+    assert(
+      fixed.size() == 10 &&
+      fixed.used() == 3 &&
+      *fixed[0] == 1 &&
+      *fixed[1] == 2 && 
+      *fixed[2] == 3 
+    );
+
+    fixed = {4,5,6};
+
+    assert(
+      fixed.used() == 3 &&
+      *fixed[0] == 4 &&
+      *fixed[1] == 5 && 
+      *fixed[2] == 6 
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // SArrayFixed and SArray cross assignments 
+  // ------------------------------------------------------------------
+  {
+    SArray<int> arr(30, {1,2,3});
+    SArrayFixed<int, 30> fixed = {4,5,6};
+
+    arr = fixed;
+
+    assert(
+      *arr[0] == 4 && 
+      *arr[1] == 5 && 
+      *arr[2] == 6 
+    );
+
+    arr = {1,2,3};
+
+    fixed = arr;
+
+    assert(
+      *fixed[0] == 1 && 
+      *fixed[1] == 2 && 
+      *fixed[2] == 3 
+    );
+
+    SArrayFixed<int, 10> fixed2(arr);
+
+    assert(
+      *fixed2[0] == 1 && 
+      *fixed2[1] == 2 && 
+      *fixed2[2] == 3 
+    );
+
+    SArray<int> arr2(10, fixed);
+
+    assert(
+      *arr2[0] == 1 && 
+      *arr2[1] == 2 && 
+      *arr2[2] == 3 
+    );
+
+    Arena arena(100);
+    SArray<int> arena_arr(arena, 3, fixed);
+
+    assert(
+      *arena_arr[0] == 1 && 
+      *arena_arr[1] == 2 && 
+      *arena_arr[2] == 3 
     );
   }
 }
