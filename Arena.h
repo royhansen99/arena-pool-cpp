@@ -20,6 +20,10 @@
 
 #define ARENA_POOL_CPP 1
 
+#ifndef SARRAY_STD_VECTORS_DISABLE 
+  #include <vector>
+#endif
+
 class Arena {
 private:
   Arena* parent;
@@ -431,6 +435,19 @@ public:
     return *this;
   }
 
+  #ifndef SARRAY_STD_VECTORS_DISABLE
+  ISArray& operator=(const std::vector<T>& other) {
+    if(!buffer_size) return *this;
+
+    if(_used) reset();
+
+    for(const auto item : other)
+      if(!push(item)) break;
+
+    return *this;
+  }
+  #endif
+
   T* operator[](const size_t i) {
     if(!_used || i >= buffer_size ||  !active[i]) return nullptr;
     return &(buffer[i]);
@@ -737,6 +754,12 @@ public:
     this->operator=(&list);
   }
 
+  #ifndef SARRAY_STD_VECTORS_DISABLE
+  SArrayFixed(const std::vector<T>& other) : SArrayFixed() {
+    this->operator=(other);
+  }
+  #endif
+
   SArrayFixed(const ISArray<T>& other) : SArrayFixed() {
     this->operator=(other);
   }
@@ -767,6 +790,15 @@ public:
     this->operator=(&list);
   }
 
+  #ifndef SARRAY_STD_VECTORS_DISABLE
+  SArray(const size_t size, const std::vector<T>& other) :
+    SArray(size)
+  {
+    this->operator=(other);
+  }
+  #endif
+
+
   SArray(const size_t size, const ISArray<T>& other) :
     SArray(size)
   {
@@ -781,6 +813,12 @@ public:
     SArray(__arena, size) 
   {
     this->operator=(&list);
+  }
+
+  SArray(Arena &__arena, const size_t size, const std::vector<T>& other) :
+    SArray(__arena, size) 
+  {
+    this->operator=(other);
   }
 
   SArray(Arena &__arena, const size_t size, const ISArray<T>& other) :
