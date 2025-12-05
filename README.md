@@ -266,8 +266,8 @@ and will be freed by the parent instead)
 | `T* push_new(...args)`            | Construct new item at end of array, by directly specifying constructor params in this method.       |
 | `T* fill(item)`                   | Add new item to array by attempting to fill any empty slots. `nullptr` if full.                    |
 | `T* fill_new(...args)`            | Same as `push_new()`, but will attempt to fill empty slots first.                                  |
-| `T* insert(pos, item)`            | Add new `item` to array by inserting it into `pos`. Slower than `push()`.                          |
-| `T* insert_new(pos, ...args)`     | Same as `push_new()`, but will insert into `pos`.                                                  |
+| `T* replace(pos, item)`            | Insert `item` to array by replacing with item in `pos`. Slower than `push()`.                          |
+| `T* replace_new(pos, ...args)`     | Same as replace(), but will construct/new with args.                                                  |
 | `void pop()`                      | Remove item at the end of array. Will also call destruct if non-trivial T.                         |
 | `void erase(pos)`                 | Remove item at specific position. Will leave an empty slot.                                        |
 | `void erase_ptr(ptr)`             | Same as `erase()`, but you provide a pointer to an item instead of a position.                     |

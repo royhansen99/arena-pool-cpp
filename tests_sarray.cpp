@@ -139,7 +139,7 @@ int main() {
       arr[3] == nullptr
     );
 
-    arr.insert(1, 900);
+    arr.replace(1, 900);
 
     assert(
       *arr[1] == 900
@@ -357,7 +357,7 @@ int main() {
       arr.at(1)->age == 9 
     );
 
-    arr.insert_new(1, "Tom", 60);
+    arr.replace_new(1, "Tom", 60);
 
     assert(
       arr[1]->name == "Tom" &&

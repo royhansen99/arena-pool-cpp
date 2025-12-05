@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.0.7
+ * Version: 0.0.8
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -600,7 +600,7 @@ public:
   }
 
   template <typename U>
-  T* insert(const size_t pos, U &&item) {
+  T* replace(const size_t pos, U &&item) {
     if(!buffer_size || pos > buffer_size || pos < 0) return nullptr;
 
     if(active[pos]) {
@@ -613,11 +613,14 @@ public:
       }
     }
 
+    if(pos >= _last)  
+      _last = pos + 1;
+
     return &(buffer[pos]);
   }
 
   template <typename... Args>
-  T* insert_new(const size_t pos, Args&&... args) {
+  T* replace_new(const size_t pos, Args&&... args) {
     if(!buffer_size || pos > buffer_size || pos < 0) return nullptr;
 
     if(active[pos]) {
@@ -625,6 +628,9 @@ public:
     } else {
       new (&buffer[pos]) T(std::forward<Args>(args)...);
     }
+
+    if(pos >= _last)  
+      _last = pos + 1;
 
     return &(buffer[pos]);
   }
