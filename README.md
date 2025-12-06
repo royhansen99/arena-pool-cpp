@@ -268,6 +268,8 @@ and will be freed by the parent instead)
 | `T* fill_new(...args)`            | Same as `push_new()`, but will attempt to fill empty slots first.                                  |
 | `T* replace(pos, item)`            | Insert `item` to array by replacing with item in `pos`. Slower than `push()`.                          |
 | `T* replace_new(pos, ...args)`     | Same as replace(), but will construct/new with args.                                                  |
+| `T* insert(iterator pos, T&& item)`     | Insert `item` before `pos`                                                  |
+| `T* insert(iterator pos, size_t count, T&& item)`     | Insert `item`, `x` times, before `pos`.                                                  |
 | `void pop()`                      | Remove item at the end of array. Will also call destruct if non-trivial T.                         |
 | `void erase(pos)`                 | Remove item at specific position. Will leave an empty slot.                                        |
 | `void erase_ptr(ptr)`             | Same as `erase()`, but you provide a pointer to an item instead of a position.                     |

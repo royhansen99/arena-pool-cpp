@@ -466,4 +466,87 @@ int main() {
       *arr[2] == 6 
     );
   }
+
+  // ------------------------------------------------------------------
+  // Insert usage 
+  // ------------------------------------------------------------------
+  {
+    // Insert int
+    {
+      SArray<int> arr(10, {1,3,4});
+
+      // Insert 2, two times, at position 1
+      arr.insert(++arr.begin(), 2, 2); 
+
+      assert(
+        arr.used() == 5 &&
+        *arr[0] == 1 &&
+        *arr[1] == 2 &&
+        *arr[2] == 2 &&
+        *arr[3] == 3 &&
+        *arr[4] == 4
+      );
+
+      // Insert 0 at position 0 
+      arr.insert(arr.begin(), 0);
+
+      assert(
+        arr.used() == 6 &&
+        *arr[0] == 0 &&
+        *arr[1] == 1 &&
+        *arr[2] == 2 &&
+        *arr[3] == 2 &&
+        *arr[4] == 3 &&
+        *arr[5] == 4
+      );
+
+      // Insert 5 at position 6 
+      arr.insert(arr.begin() + 6, 5);
+
+      assert(
+        arr.used() == 7 &&
+        *arr[0] == 0 &&
+        *arr[1] == 1 &&
+        *arr[2] == 2 &&
+        *arr[3] == 2 &&
+        *arr[4] == 3 &&
+        *arr[5] == 4 &&
+        *arr[6] == 5 
+      );
+    }
+
+    // Insert std::string
+    {
+      SArray<std::string> arr(10, {"first", "third", "fourth"});
+      arr.insert(++arr.begin(), 4, "second 4 times!"); 
+
+      assert(
+        arr.used() == 7 &&
+        *arr[0] == "first" &&
+        *arr[1] == "second 4 times!" &&
+        *arr[2] == "second 4 times!" &&
+        *arr[3] == "second 4 times!" &&
+        *arr[4] == "second 4 times!" &&
+        *arr[5] == "third" &&
+        *arr[6] == "fourth"
+      );
+    }
+
+    // Insert initializer list
+    {
+      SArray<std::string> arr(10, {"1", "5", "6"});
+
+      arr.insert(++arr.begin(), {"2", "3", "4"});
+
+      assert(
+        arr.used() == 6 &&
+        *arr[0] == "1" &&
+        *arr[1] == "2" &&
+        *arr[2] == "3" &&
+        *arr[3] == "4" &&
+        *arr[4] == "5" &&
+        *arr[5] == "6"
+      );
+    }
+  }
 }

@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.0.8
+ * Version: 0.0.9
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -645,6 +645,73 @@ public:
       _last = pos + 1;
 
     return &(buffer[pos]);
+  }
+
+private:
+  void insert_make_room_for_count(const size_t &position, const size_t& count) {
+    if(std::is_trivially_copyable<T>::value) {
+      memmove(
+        &buffer[position + count],
+        &buffer[position],
+        sizeof(T) * (_used - position)
+      );
+    } else {
+      for(size_t i = _last - 1 + count; i >= (position + count); i--) {
+        new (&buffer[i]) T(std::move(buffer[i - count]));
+        buffer[i - count].~T();
+      }
+    }
+  }
+
+public:
+  template <typename U>
+  T* insert(iterator pos, const size_t count, U &&item) {
+    size_t position = &*pos - buffer;
+    if(!count || _used + count > buffer_size || position > _last)
+      return nullptr;
+
+    compact();
+    insert_make_room_for_count(position, count);
+       
+    for(size_t i = 0; i < count; i++) {
+      active[_last + i] = true;
+
+      new (&buffer[position + i]) T(std::forward<U>(item)); 
+    }
+
+    _last += count;
+    _used += count;
+
+    return &*pos;
+  }
+
+  template <typename U>
+  T* insert(iterator pos, U &&item) {
+    return insert(pos, 1, item);
+  }
+
+  T* insert(iterator pos, const std::initializer_list<T> list) {
+    size_t count = list.size();
+    size_t position = &*pos - buffer;
+    if(!count || _used + count > buffer_size || position > _last)
+      return nullptr;
+
+    compact();
+    insert_make_room_for_count(position, count);
+
+    size_t i = 0;
+    for(const auto &it : list) {
+      active[_last + i] = true;
+
+      new (&buffer[position + i]) T(std::move(it)); 
+
+      i++;
+    }
+
+    _last += count;
+    _used += count;
+
+    return buffer;
   }
 
   template <typename U>
