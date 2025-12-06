@@ -371,6 +371,18 @@ public:
 
     bool operator!=(const iterator& other) const { return it != other.it; }
 
+    iterator& operator+(size_t count) {
+      if(_reverse) {
+        it -= count;
+        _active -= count;
+      } else {
+        it += count;
+        _active += count;
+      }
+
+      return *this;
+    }
+
     iterator& operator++() {
       if(_reverse) {
         it--;
