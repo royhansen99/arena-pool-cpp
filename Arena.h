@@ -458,7 +458,7 @@ public:
     return &(buffer[i]);
   }
 
-  const iterator begin() const {
+  iterator begin() const {
     T* first = buffer;
     bool* first_active = active;
     for(size_t i = 0; i < buffer_size; i++) {
@@ -472,7 +472,7 @@ public:
     return iterator(first, &(buffer[_last]), first_active);
   }
 
-  const iterator rbegin() const {
+  iterator rbegin() const {
     T* last = buffer;
 
     if(!buffer_size)
