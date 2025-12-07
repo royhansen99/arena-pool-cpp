@@ -679,8 +679,7 @@ private:
 
 public:
   template <typename U>
-  T* insert(iterator pos, const size_t count, U &&item) {
-    size_t position = &*pos - buffer;
+  T* insert(size_t position, const size_t count, U &&item) {
     if(!count || _used + count > buffer_size || position > _last)
       return nullptr;
 
@@ -690,13 +689,26 @@ public:
     for(size_t i = 0; i < count; i++) {
       active[_last + i] = true;
 
-      new (&buffer[position + i]) T(std::forward<U>(item)); 
+      if(std::is_trivially_copyable<T>::value)
+        memcpy(&buffer[position + i], &item, sizeof(T));
+      else
+        new (&buffer[position + i]) T(std::forward<U>(item)); 
     }
 
     _last += count;
     _used += count;
 
-    return &*pos;
+    return &buffer[position];
+  }
+
+  template <typename U>
+  T* insert(size_t position, U &&item) {
+    return insert(position, 1, item);
+  }
+
+  template <typename U>
+  T* insert(iterator pos, const size_t count, U &&item) {
+    return insert(&*pos - buffer, count, item);
   }
 
   template <typename U>
@@ -704,28 +716,39 @@ public:
     return insert(pos, 1, item);
   }
 
-  T* insert(iterator pos, const std::initializer_list<T> list) {
+  T* insert(size_t position, const std::initializer_list<T> list) {
     size_t count = list.size();
-    size_t position = &*pos - buffer;
     if(!count || _used + count > buffer_size || position > _last)
       return nullptr;
 
     compact();
     insert_make_room_for_count(position, count);
 
-    size_t i = 0;
-    for(const auto &it : list) {
-      active[_last + i] = true;
+    if(std::is_trivial<T>::value) {
+      memcpy(&buffer[position], list.begin(), sizeof(T) * count);
 
-      new (&buffer[position + i]) T(std::move(it)); 
+      for(size_t i = 0; i < count; i++) {
+        active[_last + i] = true;
+      }
+    } else {
+      size_t i = 0;
+      for(const auto &it : list) {
+        active[_last + i] = true;
 
-      i++;
+        new (&buffer[position + i]) T(std::move(it)); 
+
+        i++;
+      }
     }
 
     _last += count;
     _used += count;
 
-    return buffer;
+    return &buffer[position];
+  }
+
+  T* insert(iterator pos, const std::initializer_list<T> list) {
+    return insert(&*pos - buffer, list);
   }
 
   template <typename U>
