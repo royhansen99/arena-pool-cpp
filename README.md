@@ -60,7 +60,7 @@ int main() {
   arena.size(); // 1024 bytes
 
   // Allocate a 30-char chunk from the arena.
-  char* str = arena.allocate<char>(30);
+  char* str = arena.allocate_size<char>(30);
 
   arena.used(); // 30 bytes (of 1024 bytes)
 
@@ -216,8 +216,9 @@ be freed by the parent instead)
 |----------------------------------------|-------------------------------------------------------------------------------------------------|
 | `Arena Arena(i)`                       | Construct a new `Arena` instance of `i` bytes.                                                |
 | `Arena Arena(parent, i)`               | Construct a new child `Arena` which is nested inside `parent`, child will be `i` bytes.       |
-| `T* <T>allocate(i)`                   | Allocate a chunk inside the arena with size: sizeof(T) * i                                   |
-| `T* <T>allocate_new(args...)`         | Allocate a single item of type `T`, if it is a class `args` should be constructor parameters. Size: sizeof(T) |
+| `T* allocate_size<T>(i)`                   | Allocate a chunk inside the arena with size: sizeof(T) * i                                   |
+| `T* allocate<T>(T&& item)`                   | Allocate space for `T` and copy `item` into it.                                   |
+| `T* allocate_new<T>(args...)`         | Allocate a single item of type `T`, if it is a class `args` should be constructor parameters. Size: sizeof(T) |
 | `void* allocate_raw(i)`                | Allocate a raw chunk of `i` bytes/chars.                                                      |
 | `bool resize(i)`                       | Resize the arena to `i` bytes. If this isn't a child arena it will free+malloc a new buffer, otherwise it will grab a new allocation from its parent without freeing the previous allocation. So in general you want to avoid resizing child arenas because it leads to wasted memory. Resizing will reset/clear data in the pool. |
 | `void reset()`                         | Reset offset to 0, freeing up all bytes in the arena for re-use.                              |

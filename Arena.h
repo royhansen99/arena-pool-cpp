@@ -50,7 +50,7 @@ public:
 
   template <typename T, typename... Args>
   T* allocate_new(Args&&... args) {
-    T* new_item = allocate<T>();
+    T* new_item = allocate_size<T>();
 
     if(!new_item) return nullptr;
 
@@ -58,13 +58,27 @@ public:
   }
 
   template <typename T>
-  T* allocate(const size_t count = 1) {
+  T* allocate_size(const size_t count = 1) {
     if(!buffer) return nullptr;
 
     size_t alignment = alignof(T);
     size_t size = sizeof(T) * count;
 
     return static_cast<T*>(allocate_raw(size, alignment));
+  }
+
+  template <typename T>
+  T* allocate(T&& item) {
+    T* new_item = allocate_size<T>();
+
+    if(!new_item) return nullptr;
+
+    if(std::is_trivially_copyable<T>::value)
+      memcpy(new_item, &item, sizeof(T));
+    else
+      new (new_item) T(item);
+
+    return new_item;
   }
 
   void* allocate_raw(const size_t size,
@@ -159,13 +173,13 @@ private:
 public:
   Pool(Arena &_arena, const size_t pool_size) :
     arena(&_arena),
-    buffers(arena->allocate<PoolBuffer<T>>()),
+    buffers(arena->allocate_size<PoolBuffer<T>>()),
     buffers_size(1),
     free_ptr(nullptr),
     use_ptr(nullptr),
     _used(0)
   {
-    buffers[0] = { arena->allocate<PoolItem<T>>(pool_size), pool_size };
+    buffers[0] = { arena->allocate_size<PoolItem<T>>(pool_size), pool_size };
     reset();
   }
 
@@ -281,7 +295,7 @@ public:
     size_t new_count = buffers_size + 1;
 
     if(arena)
-      new_buffer = arena->allocate<PoolItem<T>>(size);
+      new_buffer = arena->allocate_size<PoolItem<T>>(size);
     else
       new_buffer = static_cast<PoolItem<T>*>(malloc(sizeof(PoolItem<T>) * size));
 
@@ -290,7 +304,7 @@ public:
     PoolBuffer<T>* new_list = nullptr;
 
     if(arena)
-      new_list = arena->allocate<PoolBuffer<T>>(new_count);
+      new_list = arena->allocate_size<PoolBuffer<T>>(new_count);
     else
       new_list = static_cast<PoolBuffer<T>*>(realloc(buffers, sizeof(PoolBuffer<T>) * new_count));
 
@@ -950,10 +964,10 @@ public:
     if(!size || _arena || this->buffer_size) return;
 
 
-    auto* new_buffer = __arena.allocate<T>(size);
+    auto* new_buffer = __arena.allocate_size<T>(size);
     bool* new_active = nullptr;
 
-    if(new_buffer) new_active = __arena.allocate<bool>(size);
+    if(new_buffer) new_active = __arena.allocate_size<bool>(size);
 
     if(new_active) {
       _arena = &__arena;
@@ -977,10 +991,10 @@ public:
     if(_arena) {
       if(size < this->buffer_size) return false;
 
-      new_buffer = _arena->allocate<T>(size);
+      new_buffer = _arena->allocate_size<T>(size);
 
       if(new_buffer)
-        new_active = _arena->allocate<bool>(size);
+        new_active = _arena->allocate_size<bool>(size);
 
       if(new_buffer && new_active) {
         if(std::is_trivially_copyable<T>::value) {
