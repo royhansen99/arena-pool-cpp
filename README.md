@@ -28,7 +28,7 @@ is called.
 __SArray allocator__  
 Works in much the same way as `std::vector`, but with some important differences.  
 Will pre-allocate the specified size, with the ability to shrink/grow by doing  
-`resize()`. When full, push()/fill() will return false.  
+`resize()`. When full, push()/fill() will return nullptr.  
 When removing items from beginning/middle, there will be an empty slot, since  
 it does not automatically move all items forward to cover the empty slot.  
 To move items forward and get rid of empty slots, there is a `compact()` method  
