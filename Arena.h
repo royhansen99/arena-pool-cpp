@@ -665,6 +665,8 @@ public:
 
 private:
   void insert_make_room_for_count(const size_t &position, const size_t& count) {
+    if(position == _last) return;
+
     if(std::is_trivially_copyable<T>::value) {
       memmove(
         &buffer[position + count],
@@ -682,7 +684,7 @@ private:
 public:
   template <typename U>
   T* insert(size_t position, const size_t count, U &&item) {
-    if(!count || _used + count > buffer_size || position > _last)
+    if(!count || _used + count > buffer_size || position > _last || position == buffer_size)
       return nullptr;
 
     compact();
@@ -720,7 +722,7 @@ public:
 
   T* insert(size_t position, const std::initializer_list<T> list) {
     size_t count = list.size();
-    if(!count || _used + count > buffer_size || position > _last)
+    if(!count || _used + count > buffer_size || position > _last || position == buffer_size)
       return nullptr;
 
     compact();
