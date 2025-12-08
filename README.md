@@ -217,7 +217,7 @@ be freed by the parent instead)
 | `Arena Arena(i)`                       | Construct a new `Arena` instance of `i` bytes.                                                |
 | `Arena Arena(parent, i)`               | Construct a new child `Arena` which is nested inside `parent`, child will be `i` bytes.       |
 | `T* allocate_size<T>(i)`                   | Allocate a chunk inside the arena with size: sizeof(T) * i                                   |
-| `T* allocate<T>(T&& item)`                   | Allocate space for `T` and copy `item` into it.                                   |
+| `T* allocate<T>(item)`                   | Allocate space for `T` and copy `item` into it.                                   |
 | `T* allocate_new<T>(args...)`         | Allocate a single item of type `T`, if it is a class `args` should be constructor parameters. Size: sizeof(T) |
 | `void* allocate_raw(i)`                | Allocate a raw chunk of `i` bytes/chars.                                                      |
 | `bool resize(i)`                       | Resize the arena to `i` bytes. If this isn't a child arena it will free+malloc a new buffer, otherwise it will grab a new allocation from its parent without freeing the previous allocation. So in general you want to avoid resizing child arenas because it leads to wasted memory. Resizing will reset/clear data in the pool. |
@@ -234,7 +234,7 @@ and will be freed by the parent instead)
 |-----------------------------------|-------------------------------------------------------------------------------------------------|
 | `Pool<T> Pool(i)`                 | Construct a new `Pool` of type `T` with a count of `i`, allocated with malloc/free, allocation size: sizeof(T) * `i` |
 | `Pool<T> Pool(arena, i)`          | Construct a new `Pool` of type `T` with a count of `i`, allocated in `arena`, allocation size: sizeof(T) * `i` |
-| `T* allocate(U &&item)`           | Grab a single allocation from the pool and copy item into it.                                  |
+| `T* allocate(item)`           | Grab a single allocation from the pool and copy item into it.                                  |
 | `T* allocate_new(args...)`        | Grab a single allocation from the pool, if it is a class it will use `args` as constructor parameters. |
 | `void deallocate(allocate_ptr)`   | Release a single allocation by providing a pointer that was received from a previous `allocate()`/`allocate_new()` call. Will also call destructor if non-trivial T. |
 | `void reset()`                    | Release all allocations, freeing up all usage for new allocations in the pool. Will also call destructor on all items if non-trivial T. |
@@ -269,8 +269,9 @@ and will be freed by the parent instead)
 | `T* fill_new(...args)`            | Same as `push_new()`, but will attempt to fill empty slots first.                                  |
 | `T* replace(pos, item)`            | Insert `item` to array by replacing with item in `pos`. Slower than `push()`.                          |
 | `T* replace_new(pos, ...args)`     | Same as replace(), but will construct/new with args.                                                  |
-| `T* insert(iterator pos, T&& item)`     | Insert `item` before `pos`                                                  |
-| `T* insert(iterator pos, size_t count, T&& item)`     | Insert `item`, `x` times, before `pos`.                                                  |
+| `T* insert(pos, item)`     | Insert `item` before `pos`                                                  |
+| `T* insert(pos, size_t count, item)`     | Insert `item`, `x` times, before `pos`.                                                  |
+| `T* insert_new(pos, ..args)`     | Same as insert(),but will construct/new with args.                                                  |
 | `void pop()`                      | Remove item at the end of array. Will also call destruct if non-trivial T.                         |
 | `void erase(pos)`                 | Remove item at specific position. Will leave an empty slot.                                        |
 | `void erase_ptr(ptr)`             | Same as `erase()`, but you provide a pointer to an item instead of a position.                     |

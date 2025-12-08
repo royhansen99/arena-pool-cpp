@@ -15,7 +15,7 @@ int main() {
   arena.size(); // 1024 bytes
 
   // Allocate a 30-char chunk from the arena.
-  char* str = arena.allocate<char>(30);
+  char* str = arena.allocate_size<char>(30);
 
   arena.used(); // 30 bytes (of 1024 bytes)
 
@@ -115,6 +115,8 @@ int main() {
   for(auto &it : array) {
     std::cout << "Value: " << it << "\n";
   }
+  // If you do a manual increment/decrement for-loop instead,
+  // make sure you check for empty slots by comparing for `nullptr`.
 
   // Reverse iteration, will automatically skip empty slots.
   for (auto it = array.rbegin(); it != array.rend(); ++it) {
