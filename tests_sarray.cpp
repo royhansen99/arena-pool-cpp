@@ -548,5 +548,48 @@ int main() {
         *arr[5] == "6"
       );
     }
+
+    // insert_new 
+    {
+      struct Foo {
+        int bar;
+        std::string foo;
+
+        Foo(int _bar, std::string _foo) : bar(_bar), foo(_foo) {}
+      };
+
+      SArray<Foo> arr(10);
+
+      arr.insert_new(0, 2, "Second");
+      arr.insert_new(0, 1, "First");
+
+      assert(
+        arr.used() == 2 &&
+        arr[0]->bar == 1 &&
+        arr[0]->foo == "First" &&
+        arr[1]->bar == 2 &&
+        arr[1]->foo == "Second"
+      );
+
+      arr.insert_new(2, 3, "Third");
+
+      assert(
+        arr.used() == 3 &&
+        arr[0]->bar == 1 &&
+        arr[0]->foo == "First" &&
+        arr[1]->bar == 2 &&
+        arr[1]->foo == "Second" &&
+        arr[2]->bar == 3 &&
+        arr[2]->foo == "Third"
+      );
+
+      arr.insert_new(arr.begin() + 1, 02, "Before second!");
+
+      assert(
+        arr.used() == 4 &&
+        arr[1]->bar == 02 &&
+        arr[1]->foo == "Before second!"
+      );
+    }
   }
 }

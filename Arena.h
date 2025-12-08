@@ -765,6 +765,31 @@ public:
     return insert(&*pos - buffer, list);
   }
 
+  template <typename... Args>
+  T* insert_new(size_t position, Args&&... args) {
+    if(_used == buffer_size || position > _last || position == buffer_size)
+      return nullptr;
+
+    compact();
+    insert_make_room_for_count(position, 1);
+
+    active[position] = true;
+
+    if(position != _last) active[_last] = true;
+
+    new (&buffer[position]) T(std::forward<Args>(args)...);
+
+    _last++;
+    _used++;
+
+    return &buffer[position];
+  }
+
+  template <typename... Args>
+  T* insert_new(iterator pos, Args&&... args) {
+    return insert_new(&*pos - buffer, args...);
+  }
+
   template <typename U>
   T* push(U &&item) {
     if(_used == buffer_size) return nullptr;
