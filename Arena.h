@@ -646,6 +646,11 @@ public:
     return &(buffer[pos]);
   }
 
+  template <typename U>
+  T* replace(iterator pos, U &&item) {
+    return replace(&*pos - buffer, item);
+  }
+
   template <typename... Args>
   T* replace_new(const size_t pos, Args&&... args) {
     if(!buffer_size || pos >= buffer_size || pos < 0) return nullptr;
@@ -661,6 +666,11 @@ public:
     if(pos >= _last) _last = pos + 1;
 
     return &(buffer[pos]);
+  }
+
+  template <typename... Args>
+  T* replace_new(iterator pos, Args&&... args) {
+    return replace_new(&*pos - buffer, args...);
   }
 
 private:
