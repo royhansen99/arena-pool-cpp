@@ -819,7 +819,7 @@ public:
   }
 
   void compact() {
-    if(!_used) return;
+    if(!_used || _used == _last) return;
 
     size_t target = -1;
     for(size_t i = 0; i < buffer_size; i++) {
