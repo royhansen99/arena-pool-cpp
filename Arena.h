@@ -200,7 +200,7 @@ public:
   }
 
   ~Pool() {
-    if(!std::is_trivial<T>::value) {
+    if(!std::is_trivially_destructible<T>::value) {
       while(use_ptr) {
         use_ptr->value.~T();
         use_ptr = use_ptr->next;
@@ -217,7 +217,7 @@ public:
   }
 
   void reset() {
-    if(!std::is_trivial<T>::value) {
+    if(!std::is_trivially_destructible<T>::value) {
       while(use_ptr) {
         use_ptr->value.~T();
         use_ptr = use_ptr->next;
@@ -277,7 +277,7 @@ public:
     // it is nullptr.
     if(use_ptr != item && item->prev == nullptr) return;
 
-    if(!std::is_trivial<T>::value) item->value.~T();
+    if(!std::is_trivially_destructible<T>::value) item->value.~T();
 
     if(item->prev) item->prev->next = item->next;
     if(item->next) item->next->prev = item->prev;
@@ -683,10 +683,17 @@ private:
         &buffer[position],
         sizeof(T) * (_used - position)
       );
-    } else {
+    }
+
+    if(!std::is_trivially_destructible<T>::value ||
+      !std::is_trivially_copyable<T>::value
+    ) {
       for(size_t i = _last - 1 + count; i >= (position + count); i--) {
-        new (&buffer[i]) T(std::move(buffer[i - count]));
-        buffer[i - count].~T();
+        if(!std::is_trivially_copyable<T>::value)
+          new (&buffer[i]) T(std::move(buffer[i - count]));
+
+        if(!std::is_trivially_destructible<T>::value)
+          buffer[i - count].~T();
       }
     }
   }
@@ -825,7 +832,8 @@ public:
     _used--;
     active[_last - 1] = false;
 
-    if(!std::is_trivial<T>::value) buffer[_last - 1].~T();
+    if(!std::is_trivially_destructible<T>::value)
+      buffer[_last - 1].~T();
 
     maybe_set_last(_last);
   }
@@ -840,14 +848,15 @@ public:
     _used--;
     active[pos] = false;
 
-    if(!std::is_trivial<T>::value) buffer[pos].~T();
+    if(!std::is_trivially_destructible<T>::value)
+      buffer[pos].~T();
 
     maybe_set_last(pos + 1);
   }
 
   void reset() {
     for(size_t i = 0; i < buffer_size; i++) {
-      if(active[i] && !std::is_trivial<T>::value)
+      if(active[i] && !std::is_trivially_destructible<T>::value)
         buffer[i].~T();
 
       active[i] = false;
@@ -867,12 +876,13 @@ public:
       } else if(target == -1) { 
         if(!active[i]) target = i;
       } else if(active[i]) {
-        if(std::is_trivially_copyable<T>::value) {
+        if(std::is_trivially_copyable<T>::value)
           memcpy(&(buffer[target]), &(buffer[i]), sizeof(T));
-        } else {
+        else
           new (&buffer[target]) T(std::move(buffer[i]));
+
+        if(!std::is_trivially_destructible<T>::value)
           buffer[i].~T();
-        }
 
         active[i] = false;
         active[target] = true;
@@ -926,7 +936,7 @@ public:
   }
 
   ~SArrayFixed() {
-    if(!std::is_trivial<T>::value) {
+    if(!std::is_trivially_destructible<T>::value) {
       for(size_t i = 0; i < this->buffer_size; i++) {
         if(this->active[i]) this->buffer[i].~T();
       }
@@ -989,7 +999,7 @@ public:
   }
 
   ~SArray() {
-    if(!std::is_trivial<T>::value) {
+    if(!std::is_trivially_destructible<T>::value) {
       for(size_t i = 0; i < this->buffer_size; i++) {
         if(this->active[i]) this->buffer[i].~T();
       }
@@ -1059,16 +1069,21 @@ public:
         new_active = _arena->allocate_size<bool>(size);
 
       if(new_buffer && new_active) {
-        if(std::is_trivially_copyable<T>::value) {
+        if(std::is_trivially_copyable<T>::value)
           memcpy(new_buffer, this->buffer, sizeof(T) * copy_size);
-        } else {
+
+        if(!std::is_trivially_destructible<T>::value ||
+            !std::is_trivially_copyable<T>::value
+        ) {
           for(size_t i = 0; i < this->buffer_size; i++) {
             if(!this->active[i]) break;
 
-            if(i < copy_size)
-              new (&new_buffer[i]) T(std::move(this->buffer[i]));
+            if(!std::is_trivially_copyable<T>::value &&
+              i < copy_size
+            ) new (&new_buffer[i]) T(std::move(this->buffer[i]));
 
-            this->buffer[i].~T();
+            if(!std::is_trivially_destructible<T>::value)
+              this->buffer[i].~T();
           }
         }
 
@@ -1078,23 +1093,28 @@ public:
         new_active = nullptr;
       }
     } else {
-      if(std::is_trivially_copyable<T>::value) {
-        new_buffer = static_cast<T*>(realloc(this->buffer, sizeof(T) * size));
-      } else {
+      if(std::is_trivially_copyable<T>::value)
+        new_buffer = static_cast<T*>(
+          realloc(this->buffer, sizeof(T) * size)
+        );
+      else
         new_buffer = static_cast<T*>(malloc(sizeof(T) * size));
 
-        if(new_buffer) {
-          for(size_t i = 0; i < this->buffer_size; i++) {
-              if(!this->active[i]) break;
+      if(new_buffer && (!std::is_trivially_destructible<T>::value ||
+        !std::is_trivially_copyable<T>::value)
+      ) {
+        for(size_t i = 0; i < this->buffer_size; i++) {
+            if(!this->active[i]) break;
 
-              if(i < copy_size)
-                new (&new_buffer[i]) T(std::move(this->buffer[i]));
+            if(!std::is_trivially_copyable<T>::value && i < copy_size)
+              new (&new_buffer[i]) T(std::move(this->buffer[i]));
 
+            if(!std::is_trivially_destructible<T>::value)
               this->buffer[i].~T();
-          }
-
-          free(this->buffer);
         }
+
+        if(!std::is_trivially_copyable<T>::value)
+          free(this->buffer);
       }
 
       if(new_buffer) {
