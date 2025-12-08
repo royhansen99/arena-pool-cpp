@@ -627,7 +627,7 @@ public:
 
   template <typename U>
   T* replace(const size_t pos, U &&item) {
-    if(!buffer_size || pos > buffer_size || pos < 0) return nullptr;
+    if(!buffer_size || pos >= buffer_size || pos < 0) return nullptr;
 
     if(active[pos]) {
       buffer[pos] = item;
@@ -637,26 +637,28 @@ public:
       } else {
         new (&buffer[pos]) T(std::forward<U>(item));
       }
+
+      _used++;
     }
 
-    if(pos >= _last)  
-      _last = pos + 1;
+    if(pos >= _last) _last = pos + 1;
 
     return &(buffer[pos]);
   }
 
   template <typename... Args>
   T* replace_new(const size_t pos, Args&&... args) {
-    if(!buffer_size || pos > buffer_size || pos < 0) return nullptr;
+    if(!buffer_size || pos >= buffer_size || pos < 0) return nullptr;
 
     if(active[pos]) {
       buffer[pos] = T(std::forward<Args>(args)...);
     } else {
       new (&buffer[pos]) T(std::forward<Args>(args)...);
+      active[pos] = true;
+      _used++;
     }
 
-    if(pos >= _last)  
-      _last = pos + 1;
+    if(pos >= _last) _last = pos + 1;
 
     return &(buffer[pos]);
   }
