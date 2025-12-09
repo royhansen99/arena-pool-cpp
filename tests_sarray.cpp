@@ -592,4 +592,18 @@ int main() {
       );
     }
   }
+
+  // ------------------------------------------------------------------
+  // Usage with std::unique_ptr 
+  // ------------------------------------------------------------------
+  {
+    SArray<std::unique_ptr<char>> arr(10);
+
+    char* str = new char[20];
+    strcpy(str, "Hello world!!");
+
+    arr.push(str);
+
+    assert(strcmp(arr[0]->get(), "Hello world!!") == 0);
+  }
 }
