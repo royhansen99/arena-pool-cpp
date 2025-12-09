@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.1.2
+ * Version: 0.1.3
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -952,6 +952,15 @@ template <typename T>
 class SArray : public ISArray<T> {
   Arena* _arena;
 
+protected:
+  void moved_reset() {
+    this->buffer = nullptr;
+    this->active = nullptr;
+    this->buffer_size = 0;
+    this->_used = 0;
+    this->_last = 0;
+  }
+
 public:
   using ISArray<T>::operator=;
 
@@ -985,10 +994,29 @@ public:
   }
   #endif
 
-  SArray(const ISArray<T>& other) {
-    if(other.arena()) SArray(*other.arena(), other.size());
-    else SArray(other.size());
+  // Move constructor.
+  // (Can only move SArray, not SArrayFixed)
+  SArray(SArray<T>&& other) : SArray() {
+    if(other.arena()) _arena = other.arena();
 
+    this->buffer = other.buffer;
+    this->active = other.active;
+    this->_used = other._used;
+    this->buffer_size = other.buffer_size;
+    this->_last = 5;
+
+    other.moved_reset();
+  }
+
+  SArray(const SArray<T>& other) :
+    SArray(other._arena, other.buffer_size)
+  {
+    this->operator=(other);
+  }
+
+  SArray(const ISArray<T>& other) :
+    SArray(other.size())
+  {
     this->operator=(other);
   }
 
@@ -996,6 +1024,11 @@ public:
     SArray(size)
   {
     this->operator=(other);
+  }
+
+  SArray(Arena* __arena, const size_t size) : ISArray<T>(), _arena(nullptr) {
+    if(__arena) init(*__arena, size);
+    else init(size);
   }
 
   SArray(Arena &__arena, const size_t size) : ISArray<T>(), _arena(nullptr) {
@@ -1033,6 +1066,8 @@ public:
     }
   }
 
+  SArray& operator=(const SArray& other) = default;
+
   void init(const size_t size) {
     if(!size || _arena || this->buffer_size) return;
 
@@ -1056,7 +1091,6 @@ public:
 
   void init(Arena &__arena, const size_t size) {
     if(!size || _arena || this->buffer_size) return;
-
 
     auto* new_buffer = __arena.allocate_size<T>(size);
     bool* new_active = nullptr;

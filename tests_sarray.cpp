@@ -611,7 +611,7 @@ int main() {
   // Copy constructor 
   // ------------------------------------------------------------------
   {
-    Arena arena(100);
+    Arena arena(300);
     SArray<int> org(arena, 10, {1,2,3,4,5,6});
 
     SArray<int> copy(org);
@@ -621,5 +621,40 @@ int main() {
       copy_str += std::to_string(i); 
 
     assert(copy_str == "123456");
+
+    assert(org.arena() == copy.arena());
+
+    SArrayFixed<int, 3> fixed({100,200});
+
+    SArray<int> copy2(fixed);
+    
+    assert(
+      copy2.size() == 3 &&
+      copy2.used() == 2 &&
+      *copy2[0] == 100 &&
+      *copy2[1] == 200
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Move constructor 
+  // ------------------------------------------------------------------
+  {
+    Arena arena(100);
+    SArray<int> org(arena, 5, {1,2,3,4,5});
+
+    SArray<int> copy(std::move(org));
+
+    std::string copy_str;
+    for(const auto &i : copy)
+      copy_str += std::to_string(i); 
+
+    assert(
+      org.used() == 0 &&
+      org.size() == 0 &&
+      copy.used() == 5 &&
+      copy.size() == 5 &&
+      copy_str == "12345"
+    );
   }
 }
