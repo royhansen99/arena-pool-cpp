@@ -904,6 +904,10 @@ public:
   bool empty() const {
     return _used == 0;
   }
+
+  Arena* arena() const {
+    return nullptr;
+  }
 };
 
 
@@ -955,6 +959,12 @@ public:
     init(size);
   }
 
+  SArray(const std::initializer_list<T> list) :
+    SArray(list.size())
+  {
+    this->operator=(&list);
+  }
+
   SArray(const size_t size, const std::initializer_list<T> list) :
     SArray(size)
   {
@@ -962,6 +972,12 @@ public:
   }
 
   #ifndef SARRAY_STD_VECTORS_DISABLE
+  SArray(const std::vector<T>& other) :
+    SArray(other.size())
+  {
+    this->operator=(other);
+  }
+
   SArray(const size_t size, const std::vector<T>& other) :
     SArray(size)
   {
@@ -969,6 +985,12 @@ public:
   }
   #endif
 
+  SArray(const ISArray<T>& other) {
+    if(other.arena()) SArray(*other.arena(), other.size());
+    else SArray(other.size());
+
+    this->operator=(other);
+  }
 
   SArray(const size_t size, const ISArray<T>& other) :
     SArray(size)
@@ -1151,5 +1173,9 @@ public:
     }
 
     return 0;
+  }
+
+  Arena* arena() const {
+    return _arena;
   }
 };

@@ -606,4 +606,20 @@ int main() {
 
     assert(strcmp(arr[0]->get(), "Hello world!!") == 0);
   }
+
+  // ------------------------------------------------------------------
+  // Copy constructor 
+  // ------------------------------------------------------------------
+  {
+    Arena arena(100);
+    SArray<int> org(arena, 10, {1,2,3,4,5,6});
+
+    SArray<int> copy(org);
+    std::string copy_str;
+
+    for(const auto &i : copy)
+      copy_str += std::to_string(i); 
+
+    assert(copy_str == "123456");
+  }
 }
