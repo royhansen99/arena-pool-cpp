@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.1.3
+ * Version: 0.1.4
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -910,9 +910,21 @@ public:
   }
 };
 
+template <typename T, bool Trivial>
+class SArrayFixedMixin : public ISArray<T> {
+  ~SArrayFixedMixin() {
+    for(size_t i = 0; i < this->buffer_size; i++) {
+      if(this->active[i]) this->buffer[i].~T();
+    }
+  }
+};
+
+template <typename T>
+class SArrayFixedMixin<T, true> {
+};
 
 template <typename T, size_t N>
-class SArrayFixed : public ISArray<T> {
+class SArrayFixed : public ISArray<T>, public SArrayFixedMixin<T, std::is_trivially_destructible<T>::value> {
   char static_buffer[sizeof(T) * N];
   bool static_active[N];
 
@@ -937,14 +949,6 @@ public:
 
   SArrayFixed(const ISArray<T>& other) : SArrayFixed() {
     this->operator=(other);
-  }
-
-  ~SArrayFixed() {
-    if(!std::is_trivially_destructible<T>::value) {
-      for(size_t i = 0; i < this->buffer_size; i++) {
-        if(this->active[i]) this->buffer[i].~T();
-      }
-    }
   }
 };
 
