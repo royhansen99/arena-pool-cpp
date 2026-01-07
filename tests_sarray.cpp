@@ -38,8 +38,6 @@ int main() {
 
     // Out of bounds assertions
     assert(
-      arr.push(22) == nullptr && // Array full
-      arr.fill(22) == nullptr && // Array full
       arr[-1] == nullptr &&
       arr[5] == nullptr &&
       arr.at(-1) == nullptr &&
@@ -278,7 +276,6 @@ int main() {
       *arr.push(3) == 3 && *arr[2] == 3 &&
       *arr.push(4) == 4 && *arr[3] == 4 &&
       *arr.push(5) == 5 && *arr[4] == 5 &&
-      arr.push(6) == nullptr &&
       *arr[0] == 1 && *arr[1] == 2 &&
       arr.used() == 5 
     );
@@ -387,6 +384,10 @@ int main() {
       *fixed[1] == 5 && 
       *fixed[2] == 6 
     );
+
+    // Out of bounds
+    SArrayFixed<int, 2> f = {1,2};
+    assert(f.push(3) == nullptr);
   }
 
   // ------------------------------------------------------------------
@@ -655,6 +656,31 @@ int main() {
       copy.used() == 5 &&
       copy.size() == 5 &&
       copy_str == "12345"
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Automatically grow SArray 
+  // ------------------------------------------------------------------
+  {
+    SArray<int> arr;
+    
+    assert(arr.size() == 0);
+
+    arr.push(1);
+
+    assert(arr.size() == 1);
+
+    arr.push(2);
+
+    assert(arr.size() == 2);
+
+    arr.push(3);
+
+    assert(
+      arr.size() == 4 && // doubled from previous size
+      arr.used() == 3 &&
+      *arr[0] == 1 && *arr[1] == 2
     );
   }
 }

@@ -27,8 +27,8 @@ is called.
 
 __SArray allocator__  
 Works in much the same way as `std::vector`, but with some important differences.  
-Will pre-allocate the specified size, with the ability to shrink/grow by doing  
-`resize()`. When full, push()/fill() will return nullptr.  
+Will pre-allocate the specified size, with the ability to shrink/grow.  
+Grow is automatic while shrink must called manually.  
 When removing items from beginning/middle, there will be an empty slot, since  
 it does not automatically move all items forward to cover the empty slot.  
 To move items forward and get rid of empty slots, there is a `compact()` method  
@@ -265,13 +265,13 @@ and will be freed by the parent instead)
 | `T* last()`                       | Get the last item in the array. `nullptr` if array is empty.                                      |
 | `T* push(item)`                   | Push new item to end of array. Will return `nullptr` if it fails because the array is full.        |
 | `T* push_new(...args)`            | Construct new item at end of array, by directly specifying constructor params in this method.       |
-| `T* fill(item)`                   | Add new item to array by attempting to fill any empty slots. `nullptr` if full.                    |
+| `T* fill(item)`                   | Add new item to array by attempting to fill any empty slots.                    |
 | `T* fill_new(...args)`            | Same as `push_new()`, but will attempt to fill empty slots first.                                  |
 | `T* replace(pos, item)`            | Insert `item` to array by replacing with item in `pos`. Slower than `push()`.                          |
 | `T* replace_new(pos, ...args)`     | Same as replace(), but will construct/new with args.                                                  |
 | `T* insert(pos, item)`     | Insert `item` before `pos`                                                  |
 | `T* insert(pos, size_t count, item)`     | Insert `item`, `x` times, before `pos`.                                                  |
-| `T* insert_new(pos, ..args)`     | Same as insert(),but will construct/new with args.                                                  |
+| `T* insert_new(pos, ..args)`     | Same as insert(),but will construct/new with args.                          |
 | `void pop()`                      | Remove item at the end of array. Will also call destruct if non-trivial T.                         |
 | `void erase(pos)`                 | Remove item at specific position. Will leave an empty slot.                                        |
 | `void erase_ptr(ptr)`             | Same as `erase()`, but you provide a pointer to an item instead of a position.                     |

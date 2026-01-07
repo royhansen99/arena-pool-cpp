@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.1.4
+ * Version: 0.1.5
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -369,6 +369,15 @@ protected:
     }
   }
 
+  virtual void _maybe_grow(const size_t count) { }
+
+  void maybe_grow(const size_t count) {
+    if(count && (
+      !this->buffer_size ||
+      this->buffer_size - this->_used < count
+    )) _maybe_grow(count);
+  }
+
 public:
   class iterator {
     T* _begin;
@@ -429,6 +438,8 @@ public:
   { }
 
   ISArray& operator=(const std::initializer_list<T> list) {
+    maybe_grow(list.size());
+
     if(!buffer_size) return *this;
 
     if(_used) reset();
@@ -440,6 +451,8 @@ public:
   }
 
   ISArray& operator=(const std::initializer_list<T>* list) {
+    maybe_grow(list->size());
+
     if(!buffer_size) return *this;
 
     if(_used) reset();
@@ -451,6 +464,8 @@ public:
   }
 
   ISArray& operator=(const ISArray& other) {
+    maybe_grow(other.used());
+
     if(!buffer_size) return *this;
 
     if(_used) reset();
@@ -463,6 +478,8 @@ public:
 
   #ifndef SARRAY_STD_VECTORS_DISABLE
   ISArray& operator=(const std::vector<T>& other) {
+    maybe_grow(other.size());
+
     if(!buffer_size) return *this;
 
     if(_used) reset();
@@ -583,6 +600,8 @@ public:
 
   template <typename U>
   T* fill(U &&item) {
+    maybe_grow(1);
+
     if(_used == buffer_size) return nullptr;
 
     for(size_t i = 0; i < buffer_size; i++) {
@@ -607,6 +626,8 @@ public:
 
   template <typename... Args>
   T* fill_new(Args&&... args) {
+    maybe_grow(1);
+
     if(_used == buffer_size) return nullptr;
 
     for(size_t i = 0; i < buffer_size; i++) {
@@ -701,6 +722,8 @@ private:
 public:
   template <typename U>
   T* insert(size_t position, const size_t count, U &&item) {
+    maybe_grow(count);
+
     if(!count || _used + count > buffer_size || position > _last || position == buffer_size)
       return nullptr;
 
@@ -739,6 +762,8 @@ public:
 
   T* insert(size_t position, const std::initializer_list<T> list) {
     size_t count = list.size();
+    maybe_grow(count);
+
     if(!count || _used + count > buffer_size || position > _last || position == buffer_size)
       return nullptr;
 
@@ -774,6 +799,8 @@ public:
 
   template <typename... Args>
   T* insert_new(size_t position, Args&&... args) {
+    maybe_grow(1);
+
     if(_used == buffer_size || position > _last || position == buffer_size)
       return nullptr;
 
@@ -799,6 +826,8 @@ public:
 
   template <typename U>
   T* push(U &&item) {
+    maybe_grow(1);
+
     if(_used == buffer_size) return nullptr;
 
     if(std::is_trivially_copyable<T>::value) {
@@ -816,6 +845,8 @@ public:
 
   template <typename... Args>
   T* push_new(Args&&... args) {
+    maybe_grow(1);
+
     if(_used == buffer_size) return nullptr;
 
     new (&(buffer[_last])) T(std::forward<Args>(args)...);
@@ -963,6 +994,24 @@ protected:
     this->buffer_size = 0;
     this->_used = 0;
     this->_last = 0;
+  }
+
+  void _maybe_grow(const size_t count) override {
+    if(!this->buffer_size) {
+      this->init(count);
+
+      return;
+    }
+
+    const size_t remaining = this->buffer_size - this->_used;
+
+    if(remaining > count) return;
+
+    size_t new_size = this->buffer_size * 2;
+
+    if(new_size < (this->_used + count)) new_size = this->_used + count;
+
+    this->resize(new_size);
   }
 
 public:
