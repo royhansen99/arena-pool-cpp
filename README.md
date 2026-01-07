@@ -26,16 +26,9 @@ If the pool manages it's own memory, free happens when the class-destructor
 is called.
 
 __SArray allocator__  
-Works in much the same way as `std::vector`, but with some important differences.  
-Will pre-allocate the specified size, with the ability to shrink/grow.  
-Grow is automatic while shrink must called manually.  
-When removing items from beginning/middle, there will be an empty slot, since  
-it does not automatically move all items forward to cover the empty slot.  
-To move items forward and get rid of empty slots, there is a `compact()` method  
-that must be called manually. The `fill()` method will add new items into empty  
-slots if there is any, or at the end of the array.  
-The array operator[], or the `at()` method, will return a pointer to the item  
-(nullptr if the slot is empty).  
+Works in much the same way as `std::vector`.  
+Will pre-allocate a specified size, with the ability to shrink/grow.  
+Shrink is a manual operation.  
 This allocator works by either using an `Arena`, or by managing it's own  
 memory using malloc/free.  
 
@@ -125,45 +118,28 @@ int main() {
   array.push(2);
   array.push(3);
 
-  *array.at(0); // 1
-  *array[0]; // 1
-  *array.at(1); // 2 
-  *array[1]; // 2 
+  array.at(0); // 1
+  array[0]; // 1
+  array.at(1); // 2 
+  array[1]; // 2 
 
   array.pop(); // Remove last item.
-  array.at(2); // nullptr
-  array[2]; // nullptr
 
-  array.erase(0); // Remove item at location 0.
-  array.at(0); // nullptr
-  array[0]; // nullptr
-
-  array.fill(100); // Fill item into first available
-                   // slot, starting from beginning.
-
-  array.at(0); // 100
-  array[0]; // 100
+  array.erase(0); // Remove item at position 0.
 
   array.push(400);
 
-  array.erase(1);
-
-  array.compact(); // Cover any empty slots by moving forward.
-  *array[0]; // 100
-  *array[1]; // 400
-  *array[2]; // nullptr
+  array[0]; // 2 
+  array[1]; // 400
 
   array.resize(6); // Increase size from 3 to 6.
 
-  // Iterate through items in array, will automatically
-  // skip empty slots.
+  // Iteration 
   for(auto &it : array) {
     std::cout << "Value: " << it << "\n";
   }
-  // If you do a manual increment/decrement for-loop instead,
-  // make sure you check for empty slots by comparing for `nullptr`.
 
-  // Reverse iteration, will automatically skip empty slots.
+  // Reverse iteration
   for (auto it = array.rbegin(); it != array.rend(); ++it) {
     std::cout << "Value: " << *it << "\n";
   }
@@ -259,14 +235,12 @@ and will be freed by the parent instead)
 | Function Name                     | Description                                                                                          |
 |-----------------------------------|------------------------------------------------------------------------------------------------------|
 | `SArray<T> SArray(i)`             | Construct a new `SArray` of type `T` with a count of `i`, allocated with malloc/free.              |
-| `T* at(pos)`                      | Get item at position. Will return `nullptr` if empty slot.                                         |
-| `T* operator[]`                   | Array accessor s_array[2], works the same as `at(2)`.                                             |
+| `T& at(pos)`                      | Get item at position. Will return `nullptr` if empty slot.                                         |
+| `T& operator[]`                   | Array accessor s_array[2], works the same as `at(2)`.                                             |
 | `T* first()`                      | Get the first item in the array. `nullptr` if array is empty.                                     |
 | `T* last()`                       | Get the last item in the array. `nullptr` if array is empty.                                      |
-| `T* push(item)`                   | Push new item to end of array. Will return `nullptr` if it fails because the array is full.        |
+| `T* push(item)`                   | Push new item to end of array. `nullptr` if full and automatic grow fails.       |
 | `T* push_new(...args)`            | Construct new item at end of array, by directly specifying constructor params in this method.       |
-| `T* fill(item)`                   | Add new item to array by attempting to fill any empty slots.                    |
-| `T* fill_new(...args)`            | Same as `push_new()`, but will attempt to fill empty slots first.                                  |
 | `T* replace(pos, item)`            | Insert `item` to array by replacing with item in `pos`. Slower than `push()`.                          |
 | `T* replace_new(pos, ...args)`     | Same as replace(), but will construct/new with args.                                                  |
 | `T* insert(pos, item)`     | Insert `item` before `pos`                                                  |
@@ -276,7 +250,6 @@ and will be freed by the parent instead)
 | `void erase(pos)`                 | Remove item at specific position. Will leave an empty slot.                                        |
 | `void erase_ptr(ptr)`             | Same as `erase()`, but you provide a pointer to an item instead of a position.                     |
 | `void reset()`                    | Clear/empty all items. Will also call destruct on all items if non-trivial T.                      |
-| `void compact()`                  | Get rid of all empty slots by moving items forward.                                                |
 | `bool resize(size)`               | Change the allocated size of the array. Will run `compact()` before resizing.                      |
 | `bool shrink_to_fit()`            | Shrink size to fit usage(), uses resize() to achieve this. If usage() == 0, will resize to 1.      |
 | `size_t size()`                   | Get the total count (of type `T`) allocated in the pool.                                           |

@@ -352,22 +352,9 @@ template <typename T>
 class ISArray {
 protected: 
   T* buffer;
-  bool* active;
   size_t buffer_size;
   size_t _used;
   size_t _last;
-
-  void maybe_set_last(const size_t pos) {
-    if(_last != pos) return;
-
-    _last = 0;
-
-    if(!_used) return;
-
-    for(size_t i = 0; i < buffer_size; i++) {
-      if(active[i]) _last = i + 1;
-    }
-  }
 
   virtual void _maybe_grow(const size_t count) { }
 
@@ -380,50 +367,26 @@ protected:
 
 public:
   class iterator {
-    T* _begin;
-    T* _end;
-    bool* _active;
     T* it;
     bool _reverse;
   public:
-    explicit iterator(T* begin, T* end, bool* active, bool reverse = false):
-      _begin(begin), _end(end), _active(active), it(begin),
-      _reverse(reverse) { }
+    explicit iterator(T* begin, bool reverse = false):
+      it(begin), _reverse(reverse) { }
 
     T& operator*() const { return *it; }
 
     bool operator!=(const iterator& other) const { return it != other.it; }
 
     iterator& operator+(size_t count) {
-      if(_reverse) {
-        it -= count;
-        _active -= count;
-      } else {
-        it += count;
-        _active += count;
-      }
+      if(_reverse) it -= count;
+      else it += count;
 
       return *this;
     }
 
     iterator& operator++() {
-      if(_reverse) {
-        it--;
-        _active--;
-
-        while(it != _end && !*_active) {
-          it--;
-          _active--;
-        }
-      } else {
-        it++;
-        _active++;
-
-        while(it != _end && !*_active) {
-          it++;
-          _active++;
-        }
-      }
+      if(_reverse) it--;
+      else it++;
 
       return *this;
     }
@@ -431,7 +394,6 @@ public:
 
   ISArray() :
     buffer(nullptr),
-    active(nullptr),
     buffer_size(0),
     _used(0),
     _last(0)
@@ -491,93 +453,42 @@ public:
   }
   #endif
 
-  T* operator[](const size_t i) {
-    if(!_used || i >= buffer_size ||  !active[i]) return nullptr;
-    return &(buffer[i]);
+  T& operator[](const size_t i) {
+    return buffer[i];
   }
 
-  const T* operator[](const size_t i) const {
-    if(!_used || i >= buffer_size ||  !active[i]) return nullptr;
-    return &(buffer[i]);
+  const T& operator[](const size_t i) const {
+    return buffer[i];
   }
 
   iterator begin() const {
-    T* first = buffer;
-    bool* first_active = active;
-    for(size_t i = 0; i < buffer_size; i++) {
-      if(active[i]) {
-        first = &(buffer[i]);
-        first_active = &(active[i]);
-        break;
-      }
-    }
-
-    return iterator(first, &(buffer[_last]), first_active);
+    return iterator(buffer);
   }
 
   iterator rbegin() const {
-    T* last = buffer;
-
-    if(!buffer_size)
-      return iterator(last, last, active, true);
-
-    for(size_t i = 0; i < buffer_size; i++) {
-      if(active[i]) {
-        last = &(buffer[i]);
-        break;
-      }
-    }
-
-    return iterator(&(buffer[_last - 1]), last - 1, &(active[_last - 1]), true);
+    return iterator(&(buffer[!_used ? _last : _last - 1]), true);
   }
 
   const iterator end() const {
-    if(!buffer_size)
-      return iterator(buffer, buffer, active);
-
-    return iterator(&(buffer[_last]), &(buffer[_last]), &(active[_last - 1]));
+    return iterator(&(buffer[_last]));
   }
 
   const iterator rend() const {
-    T* last = buffer;
-
-    if(!buffer_size)
-      return iterator(buffer, buffer, active);
-
-    for(size_t i = 0; i < buffer_size; i++) {
-      if(active[i]) {
-        last = &(buffer[i]);
-        break;
-      }
-    }
-
-    return iterator(last - 1, last - 1, active);
+    return iterator(buffer - 1);
   }
 
   T* first() {
-    if(_used) {
-      for(size_t i = 0; i < buffer_size; i++) {
-        if(active[i]) return &(buffer[i]);
-      }
-    }
-
-    return nullptr;
+    return _used ? &(buffer[0]) : nullptr;
   }
 
   const T* first() const {
-    if(_used) {
-      for(size_t i = 0; i < buffer_size; i++) {
-        if(active[i]) return &(buffer[i]);
-      }
-    }
-
-    return nullptr;
+    return _used ? &(buffer[0]) : nullptr;
   }
 
   T* last() {
     if(!_used) return nullptr;
 
-    return &(buffer[_last - 1]);
+    return _used ? &(buffer[_last - 1]) : nullptr;
   }
 
   const T* last() const {
@@ -586,107 +497,31 @@ public:
     return &(buffer[_last - 1]);
   }
 
-  T* at(const size_t pos) {
-    if(!_used || pos >= buffer_size ||  !active[pos]) return nullptr;
-
-    return &(buffer[pos]);
+  T& at(const size_t pos) {
+    return buffer[pos];
   }
 
-  const T* at(const size_t pos) const {
-    if(!_used || pos >= buffer_size ||  !active[pos]) return nullptr;
-
-    return &(buffer[pos]);
+  const T& at(const size_t pos) const {
+    return buffer[pos];
   }
 
   template <typename U>
-  T* fill(U &&item) {
-    maybe_grow(1);
+  T& replace(const size_t pos, U &&item) {
+    buffer[pos] = item;
 
-    if(_used == buffer_size) return nullptr;
-
-    for(size_t i = 0; i < buffer_size; i++) {
-      if(active[i]) continue;
-
-      if(std::is_trivially_copyable<T>::value) {
-        memcpy(&(buffer[i]), &item, sizeof(T));
-      } else {
-        new (&buffer[i]) T(std::forward<U>(item));
-      }
-
-      active[i] = true;
-      _used++;
-
-      if(i == _last) _last++;
-
-      return &(buffer[i]);
-    }
-
-    return nullptr;
-  }
-
-  template <typename... Args>
-  T* fill_new(Args&&... args) {
-    maybe_grow(1);
-
-    if(_used == buffer_size) return nullptr;
-
-    for(size_t i = 0; i < buffer_size; i++) {
-      if(active[i]) continue;
-
-      new (&(buffer[i])) T(std::forward<Args>(args)...);
-
-      active[i] = true;
-      _used++;
-
-      if(i == _last) _last++;
-
-      return &(buffer[i]);
-    }
-
-    return nullptr;
+    return buffer[pos];
   }
 
   template <typename U>
-  T* replace(const size_t pos, U &&item) {
-    if(!buffer_size || pos >= buffer_size || pos < 0) return nullptr;
-
-    if(active[pos]) {
-      buffer[pos] = item;
-    } else {
-      if(std::is_trivially_copyable<T>::value) {
-        memcpy(&(buffer[pos]), &item, sizeof(T));
-      } else {
-        new (&buffer[pos]) T(std::forward<U>(item));
-      }
-
-      _used++;
-    }
-
-    if(pos >= _last) _last = pos + 1;
-
-    return &(buffer[pos]);
-  }
-
-  template <typename U>
-  T* replace(iterator pos, U &&item) {
+  T& replace(iterator pos, U &&item) {
     return replace(&*pos - buffer, item);
   }
 
   template <typename... Args>
-  T* replace_new(const size_t pos, Args&&... args) {
-    if(!buffer_size || pos >= buffer_size || pos < 0) return nullptr;
+  T& replace_new(const size_t pos, Args&&... args) {
+    buffer[pos] = T(std::forward<Args>(args)...);
 
-    if(active[pos]) {
-      buffer[pos] = T(std::forward<Args>(args)...);
-    } else {
-      new (&buffer[pos]) T(std::forward<Args>(args)...);
-      active[pos] = true;
-      _used++;
-    }
-
-    if(pos >= _last) _last = pos + 1;
-
-    return &(buffer[pos]);
+    return buffer[pos];
   }
 
   template <typename... Args>
@@ -727,12 +562,9 @@ public:
     if(!count || _used + count > buffer_size || position > _last || position == buffer_size)
       return nullptr;
 
-    compact();
     insert_make_room_for_count(position, count);
        
     for(size_t i = 0; i < count; i++) {
-      active[_last + i] = true;
-
       if(std::is_trivially_copyable<T>::value)
         memcpy(&buffer[position + i], &item, sizeof(T));
       else
@@ -767,20 +599,13 @@ public:
     if(!count || _used + count > buffer_size || position > _last || position == buffer_size)
       return nullptr;
 
-    compact();
     insert_make_room_for_count(position, count);
 
     if(std::is_trivial<T>::value) {
       memcpy(&buffer[position], list.begin(), sizeof(T) * count);
-
-      for(size_t i = 0; i < count; i++) {
-        active[_last + i] = true;
-      }
     } else {
       size_t i = 0;
       for(const auto &it : list) {
-        active[_last + i] = true;
-
         new (&buffer[position + i]) T(std::move(it)); 
 
         i++;
@@ -804,12 +629,7 @@ public:
     if(_used == buffer_size || position > _last || position == buffer_size)
       return nullptr;
 
-    compact();
     insert_make_room_for_count(position, 1);
-
-    active[position] = true;
-
-    if(position != _last) active[_last] = true;
 
     new (&buffer[position]) T(std::forward<Args>(args)...);
 
@@ -836,7 +656,6 @@ public:
       new (&buffer[_last]) T(std::forward<U>(item));
     }
 
-    active[_last] = true;
     _used++;
     _last++;
 
@@ -850,7 +669,7 @@ public:
     if(_used == buffer_size) return nullptr;
 
     new (&(buffer[_last])) T(std::forward<Args>(args)...);
-    active[_last] = true;
+
     _used++;
     _last++;
 
@@ -858,15 +677,7 @@ public:
   }
 
   void pop() {
-    if(!_used) return;
-
-    _used--;
-    active[_last - 1] = false;
-
-    if(!std::is_trivially_destructible<T>::value)
-      buffer[_last - 1].~T();
-
-    maybe_set_last(_last);
+    if(_used) erase(_last - 1);
   }
 
   void erase_ptr(const T *item) {
@@ -874,54 +685,32 @@ public:
   }
 
   void erase(const size_t pos) {
-    if(!buffer_size || pos <  0 || pos >= buffer_size || !active[pos]) return;
-
-    _used--;
-    active[pos] = false;
+    if(!buffer_size || pos <  0 || pos >= _used) return;
 
     if(!std::is_trivially_destructible<T>::value)
       buffer[pos].~T();
 
-    maybe_set_last(pos + 1);
+    for(size_t i = pos + 1; i < _used; i++) {
+      if(std::is_trivially_copyable<T>::value)
+        memcpy(&(buffer[i - 1]), &(buffer[i]), sizeof(T));
+      else
+        new (&buffer[i - 1]) T(std::move(buffer[i]));
+
+      if(!std::is_trivially_destructible<T>::value)
+        buffer[i].~T();
+    }
+
+    _used--;
+    _last--;
   }
 
   void reset() {
-    for(size_t i = 0; i < buffer_size; i++) {
-      if(active[i] && !std::is_trivially_destructible<T>::value)
+    for(size_t i = 0; i < _used; i++)
+      if(!std::is_trivially_destructible<T>::value)
         buffer[i].~T();
-
-      active[i] = false;
-    }
 
     _used = 0;
     _last = 0;
-  }
-
-  void compact() {
-    if(!_used || _used == _last) return;
-
-    size_t target = -1;
-    for(size_t i = 0; i < buffer_size; i++) {
-      if(target ==  _used) {
-        break;
-      } else if(target == -1) { 
-        if(!active[i]) target = i;
-      } else if(active[i]) {
-        if(std::is_trivially_copyable<T>::value)
-          memcpy(&(buffer[target]), &(buffer[i]), sizeof(T));
-        else
-          new (&buffer[target]) T(std::move(buffer[i]));
-
-        if(!std::is_trivially_destructible<T>::value)
-          buffer[i].~T();
-
-        active[i] = false;
-        active[target] = true;
-        target++;
-      }
-    }
-
-    if(target != -1) _last = target;
   }
 
   size_t used() const {
@@ -944,9 +733,8 @@ public:
 template <typename T, bool Trivial>
 class SArrayFixedMixin : public ISArray<T> {
   ~SArrayFixedMixin() {
-    for(size_t i = 0; i < this->buffer_size; i++) {
-      if(this->active[i]) this->buffer[i].~T();
-    }
+    for(size_t i = 0; i < this->_used; i++)
+      this->buffer[i].~T();
   }
 };
 
@@ -957,14 +745,12 @@ class SArrayFixedMixin<T, true> {
 template <typename T, size_t N>
 class SArrayFixed : public ISArray<T>, public SArrayFixedMixin<T, std::is_trivially_destructible<T>::value> {
   char static_buffer[sizeof(T) * N];
-  bool static_active[N];
 
 public:
   using ISArray<T>::operator=;
 
   SArrayFixed() : ISArray<T>() {
     this->buffer = reinterpret_cast<T*>(static_buffer);
-    this->active = static_active;
     this->buffer_size = N;
   }
 
@@ -990,7 +776,6 @@ class SArray : public ISArray<T> {
 protected:
   void moved_reset() {
     this->buffer = nullptr;
-    this->active = nullptr;
     this->buffer_size = 0;
     this->_used = 0;
     this->_last = 0;
@@ -1053,7 +838,6 @@ public:
     if(other.arena()) _arena = other.arena();
 
     this->buffer = other.buffer;
-    this->active = other.active;
     this->_used = other._used;
     this->buffer_size = other.buffer_size;
     this->_last = 5;
@@ -1108,15 +892,12 @@ public:
 
   ~SArray() {
     if(!std::is_trivially_destructible<T>::value) {
-      for(size_t i = 0; i < this->buffer_size; i++) {
-        if(this->active[i]) this->buffer[i].~T();
-      }
+      for(size_t i = 0; i < this->_used; i++)
+        this->buffer[i].~T();
     }
 
-    if(!_arena && this->buffer_size) {
+    if(!_arena && this->buffer_size)
       free(this->buffer);
-      free(this->active);
-    }
   }
 
   SArray& operator=(const SArray& other) = default;
@@ -1126,47 +907,25 @@ public:
 
     this->buffer = static_cast<T*>(malloc(sizeof(T) * size));
 
-    if(this->buffer)
-      this->active = static_cast<bool*>(malloc(sizeof(bool) * size));
-
-    if(!this->buffer || !this->active) {
-      if(this->buffer) free(this->buffer);
-      if(this->active) free(this->active);
-
-      this->buffer = nullptr;
-      this->active = nullptr;
-
-      return;
-    }
-
-    this->buffer_size = size;
+    if(this->buffer) this->buffer_size = size;
   }
 
   void init(Arena &__arena, const size_t size) {
     if(!size || _arena || this->buffer_size) return;
 
     auto* new_buffer = __arena.allocate_size<T>(size);
-    bool* new_active = nullptr;
 
-    if(new_buffer) new_active = __arena.allocate_size<bool>(size);
-
-    if(new_active) {
+    if(new_buffer) {
       _arena = &__arena;
       this->buffer = new_buffer;
-      this->active = new_active;
-
       this->buffer_size = size;
     }
   }
 
   bool resize(const size_t size) {
-    this->compact();
-
     if(size == this->buffer_size) return true;
 
     T* new_buffer = nullptr;
-    bool *new_active = nullptr;
-
     size_t copy_size = size > this->buffer_size ? this->buffer_size : size;
 
     if(_arena) {
@@ -1174,19 +933,14 @@ public:
 
       new_buffer = _arena->allocate_size<T>(size);
 
-      if(new_buffer)
-        new_active = _arena->allocate_size<bool>(size);
-
-      if(new_buffer && new_active) {
+      if(new_buffer) {
         if(std::is_trivially_copyable<T>::value)
           memcpy(new_buffer, this->buffer, sizeof(T) * copy_size);
 
         if(!std::is_trivially_destructible<T>::value ||
             !std::is_trivially_copyable<T>::value
         ) {
-          for(size_t i = 0; i < this->buffer_size; i++) {
-            if(!this->active[i]) break;
-
+          for(size_t i = 0; i < this->_used; i++) {
             if(!std::is_trivially_copyable<T>::value &&
               i < copy_size
             ) new (&new_buffer[i]) T(std::move(this->buffer[i]));
@@ -1195,11 +949,6 @@ public:
               this->buffer[i].~T();
           }
         }
-
-        memcpy(new_active, this->active, sizeof(bool) * copy_size);
-      } else {
-        new_buffer = nullptr;
-        new_active = nullptr;
       }
     } else {
       if(std::is_trivially_copyable<T>::value)
@@ -1212,9 +961,7 @@ public:
       if(new_buffer && (!std::is_trivially_destructible<T>::value ||
         !std::is_trivially_copyable<T>::value)
       ) {
-        for(size_t i = 0; i < this->buffer_size; i++) {
-            if(!this->active[i]) break;
-
+        for(size_t i = 0; i < this->_used; i++) {
             if(!std::is_trivially_copyable<T>::value && i < copy_size)
               new (&new_buffer[i]) T(std::move(this->buffer[i]));
 
@@ -1225,28 +972,16 @@ public:
         if(!std::is_trivially_copyable<T>::value)
           free(this->buffer);
       }
-
-      if(new_buffer) {
-        new_active = static_cast<bool*>(realloc(this->active, sizeof(bool) * size));
-      }
     }
 
-    if(new_buffer) this->buffer = new_buffer;
-
-    if(new_active) {
-      if(size > this->buffer_size) {
-        for(size_t i = copy_size; i < size; i++) {
-          new_active[i] = false;
-        }
-      }
+    if(new_buffer) {
+      this->buffer = new_buffer;
+      this->buffer_size = size;
 
       if(this->_used > size) {
         this->_used = size;
         this->_last = size;
       }
-
-      this->active = new_active;
-      this->buffer_size = size;
 
       return true;
     }

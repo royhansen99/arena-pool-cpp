@@ -23,8 +23,8 @@ int main() {
 
     assert(
       arr.used() == 2 &&
-      *arr[0] == 1 &&
-      *arr[1] == 2
+      arr[0] == 1 &&
+      arr[1] == 2
     );
 
     arr = {};
@@ -36,23 +36,15 @@ int main() {
     int four = 4;
     auto* p4 = arr.push(four);
 
-    // Out of bounds assertions
     assert(
-      arr[-1] == nullptr &&
-      arr[5] == nullptr &&
-      arr.at(-1) == nullptr &&
-      arr.at(5) == nullptr
-    );
-
-    assert(
-      *arr[0] == 1 && *p1 == 1 && 
-      *arr[1] == 2 && *p2 == 2 && 
-      *arr[2] == 3 && *p3 == 3 && 
-      *arr[3] == 4 && *p4 == 4 && 
-      *arr.at(0) == 1 &&
-      *arr.at(1) == 2 && 
-      *arr.at(2) == 3 && 
-      *arr.at(3) == 4 && 
+      arr[0] == 1 && *p1 == 1 && 
+      arr[1] == 2 && *p2 == 2 && 
+      arr[2] == 3 && *p3 == 3 && 
+      arr[3] == 4 && *p4 == 4 && 
+      arr.at(0) == 1 &&
+      arr.at(1) == 2 && 
+      arr.at(2) == 3 && 
+      arr.at(3) == 4 && 
       arr.used() == 4 &&
       arr.size() == 4 &&
       arr.empty() == false &&
@@ -61,34 +53,18 @@ int main() {
 
     arr.pop();
 
-    assert(
-      arr.used() == 3 &&
-      arr[3] == nullptr &&
-      arr.at(3) == nullptr
-    );
+    assert(arr.used() == 3);
 
     arr.erase(0);
 
-    assert(
-      arr.used() == 2 &&
-      arr[0] == nullptr &&
-      arr.at(0) == nullptr
-    );
-
-    assert(
-      *arr.fill(9) == 9 && *arr[0] == 9 &&
-      arr.used() == 3 &&
-      *arr.fill(7) == 7 && *arr[3] == 7 &&
-      arr.used() == 4
-    );
+    assert(arr.used() == 2);
 
     arr.erase(1);
-    arr.compact();
 
     assert(
-      *arr[0] == 9 &&
-      *arr[1] == 3 &&
-      *arr[2] == 7 &&
+      arr[0] == 2 &&
+      *arr.push(3) == 3 &&
+      *arr.push(7) == 7 &&
       arr.used() == 3
     );
 
@@ -99,16 +75,15 @@ int main() {
       *arr.push(10) == 10 &&
       *arr.push(11) == 11 &&
       *arr.push(12) == 12 &&
-      *arr[0] == 9 &&
-      *arr[1] == 3 &&
-      *arr[2] == 7 &&
-      arr[6] == nullptr
+      arr[0] == 2 &&
+      arr[1] == 3 &&
+      arr[2] == 7
     );
 
     int i = 0;
     for(auto &it : arr) {
       assert(
-        (i == 0 && it == 9) || 
+        (i == 0 && it == 2) || 
         (i == 1 && it == 3) || 
         (i == 2 && it == 7) || 
         (i == 3 && it == 10) || 
@@ -119,29 +94,23 @@ int main() {
       i++;
     }
 
-    arr.erase_ptr(arr[2]);
+    arr.erase_ptr(&arr[2]);
 
-    assert(
-      arr.used() == 5 &&
-      arr[2] == nullptr
-    );
+    assert(arr.used() == 5);
 
     arr.resize(3);
 
     assert(
       arr.used() == 3 &&
       arr.size() == 3 &&
-      *arr[0] == 9 &&
-      *arr[1] == 3 &&
-      *arr[2] == 10 &&
-      arr[3] == nullptr
+      arr[0] == 2 &&
+      arr[1] == 3 &&
+      arr[2] == 10
     );
 
     arr.replace(1, 900);
 
-    assert(
-      *arr[1] == 900
-    );
+    assert(arr[1] == 900);
 
     arr.resize(20);
 
@@ -171,9 +140,9 @@ int main() {
     assert(
       arr.size() == 3 &&
       arr.used() == 3 &&
-      *arr[0] == 1 &&
-      *arr[1] == 2 &&
-      *arr[2] == 3
+      arr[0] == 1 &&
+      arr[1] == 2 &&
+      arr[2] == 3
     );
 
     Arena arena(32);
@@ -182,9 +151,9 @@ int main() {
     assert(
       arena_arr.size() == 3 &&
       arena_arr.used() == 3 &&
-      *arena_arr[0] == 1 &&
-      *arena_arr[1] == 2 &&
-      *arena_arr[2] == 3
+      arena_arr[0] == 1 &&
+      arena_arr[1] == 2 &&
+      arena_arr[2] == 3
     );
 
     SArrayFixed<int, 3> fixed({1,2,3});
@@ -192,9 +161,9 @@ int main() {
     assert(
       fixed.size() == 3 &&
       fixed.used() == 3 &&
-      *fixed[0] == 1 &&
-      *fixed[1] == 2 && 
-      *fixed[2] == 3 
+      fixed[0] == 1 &&
+      fixed[1] == 2 && 
+      fixed[2] == 3 
     );
   }
 
@@ -217,6 +186,9 @@ int main() {
     }
 
     assert(test == "012345");
+    // 12345
+    // 1235
+    //
 
     // Reverse
     test = "";
@@ -226,16 +198,16 @@ int main() {
 
     assert(test == "543210");
 
-    arr.erase(0);
-    arr.erase(3);
-    arr.erase(5);
+    arr.erase(0); // Erase 0
+    arr.erase(3); // Erase 4
+    arr.erase(5); // Out of bound, does nothing.
 
     test = "";
     for(const auto &it : arr) {
       test += it + '0';
     }
 
-    assert(test == "124");
+    assert(test == "1235");
 
     // Reverse
     test = "";
@@ -243,7 +215,7 @@ int main() {
       test += *it + '0';
     }
 
-    assert(test == "421");
+    assert(test == "5321");
   }
 
   // ------------------------------------------------------------------
@@ -257,15 +229,12 @@ int main() {
       arr.size() == 2 &&
       arr.used() == 0 &&
       arr.empty() == true &&
-      a.used() == (
-        (sizeof(int) * 2) +
-        (sizeof(bool) * 2)
-      )
+      a.used() == sizeof(int) * 2
     );
 
     assert(
-      *arr.push(1) == 1 && *arr[0] == 1 &&
-      *arr.push(2) == 2 && *arr[1] == 2 &&
+      *arr.push(1) == 1 && arr[0] == 1 &&
+      *arr.push(2) == 2 && arr[1] == 2 &&
       arr.used() == 2
     );
 
@@ -273,23 +242,16 @@ int main() {
 
     assert(
       arr.size() == 5 &&
-      *arr.push(3) == 3 && *arr[2] == 3 &&
-      *arr.push(4) == 4 && *arr[3] == 4 &&
-      *arr.push(5) == 5 && *arr[4] == 5 &&
-      *arr[0] == 1 && *arr[1] == 2 &&
+      *arr.push(3) == 3 && arr[2] == 3 &&
+      *arr.push(4) == 4 && arr[3] == 4 &&
+      *arr.push(5) == 5 && arr[4] == 5 &&
+      arr[0] == 1 && arr[1] == 2 &&
       arr.used() == 5 
     );
 
     arr.reset();
 
-    assert(
-      arr.used() == 0 &&
-      arr[0] == nullptr &&
-      arr[1] == nullptr &&
-      arr[2] == nullptr &&
-      arr[3] == nullptr &&
-      arr[4] == nullptr
-    );
+    assert(arr.used() == 0);
   }
 
   // ------------------------------------------------------------------
@@ -308,14 +270,13 @@ int main() {
       (*arr.push(z)).age == 20 &&
       arr.used() == 1 &&
       arr.size() == 3 &&
-      (*arr[0]).age == 20 &&
-      arr[1] == nullptr
+      arr[0].age == 20
     );
 
     assert(
       (*arr.push_new(Person{"Doe", 30})).age == 30 &&
       arr.used() == 2 &&
-      (*arr[1]).age == 30
+      arr[1].age == 30
     );
   }
 
@@ -343,22 +304,22 @@ int main() {
 
     assert(
       arr.used() == 2 &&
-      arr[0]->name == "John" &&
-      arr[1]->name == "James"
+      arr[0].name == "John" &&
+      arr[1].name == "James"
     );
 
-    *arr[1] = Person("Frank", 9);
+    arr[1] = Person("Frank", 9);
 
     assert(
-      arr.at(1)->name == "Frank" &&
-      arr.at(1)->age == 9 
+      arr.at(1).name == "Frank" &&
+      arr.at(1).age == 9 
     );
 
     arr.replace_new(1, "Tom", 60);
 
     assert(
-      arr[1]->name == "Tom" &&
-      arr[1]->age == 60
+      arr[1].name == "Tom" &&
+      arr[1].age == 60
     );
   }
 
@@ -371,18 +332,18 @@ int main() {
     assert(
       fixed.size() == 10 &&
       fixed.used() == 3 &&
-      *fixed[0] == 1 &&
-      *fixed[1] == 2 && 
-      *fixed[2] == 3 
+      fixed[0] == 1 &&
+      fixed[1] == 2 && 
+      fixed[2] == 3 
     );
 
     fixed = {4,5,6};
 
     assert(
       fixed.used() == 3 &&
-      *fixed[0] == 4 &&
-      *fixed[1] == 5 && 
-      *fixed[2] == 6 
+      fixed[0] == 4 &&
+      fixed[1] == 5 && 
+      fixed[2] == 6 
     );
 
     // Out of bounds
@@ -400,9 +361,9 @@ int main() {
     arr = fixed;
 
     assert(
-      *arr[0] == 4 && 
-      *arr[1] == 5 && 
-      *arr[2] == 6 
+      arr[0] == 4 && 
+      arr[1] == 5 && 
+      arr[2] == 6 
     );
 
     arr = {1,2,3};
@@ -410,34 +371,34 @@ int main() {
     fixed = arr;
 
     assert(
-      *fixed[0] == 1 && 
-      *fixed[1] == 2 && 
-      *fixed[2] == 3 
+      fixed[0] == 1 && 
+      fixed[1] == 2 && 
+      fixed[2] == 3 
     );
 
     SArrayFixed<int, 10> fixed2(arr);
 
     assert(
-      *fixed2[0] == 1 && 
-      *fixed2[1] == 2 && 
-      *fixed2[2] == 3 
+      fixed2[0] == 1 && 
+      fixed2[1] == 2 && 
+      fixed2[2] == 3 
     );
 
     SArray<int> arr2(10, fixed);
 
     assert(
-      *arr2[0] == 1 && 
-      *arr2[1] == 2 && 
-      *arr2[2] == 3 
+      arr2[0] == 1 && 
+      arr2[1] == 2 && 
+      arr2[2] == 3 
     );
 
     Arena arena(100);
     SArray<int> arena_arr(arena, 3, fixed);
 
     assert(
-      *arena_arr[0] == 1 && 
-      *arena_arr[1] == 2 && 
-      *arena_arr[2] == 3 
+      arena_arr[0] == 1 && 
+      arena_arr[1] == 2 && 
+      arena_arr[2] == 3 
     );
   }
 
@@ -451,9 +412,9 @@ int main() {
 
     assert(
       arr.used() == 3 &&
-      *arr[0] == 1 &&
-      *arr[1] == 2 &&
-      *arr[2] == 3
+      arr[0] == 1 &&
+      arr[1] == 2 &&
+      arr[2] == 3
     );
 
     vec = {4,5,6};
@@ -462,9 +423,9 @@ int main() {
 
     assert(
       arr.used() == 3 &&
-      *arr[0] == 4 &&
-      *arr[1] == 5 &&
-      *arr[2] == 6 
+      arr[0] == 4 &&
+      arr[1] == 5 &&
+      arr[2] == 6 
     );
   }
 
@@ -481,11 +442,11 @@ int main() {
 
       assert(
         arr.used() == 5 &&
-        *arr[0] == 1 &&
-        *arr[1] == 2 &&
-        *arr[2] == 2 &&
-        *arr[3] == 3 &&
-        *arr[4] == 4
+        arr[0] == 1 &&
+        arr[1] == 2 &&
+        arr[2] == 2 &&
+        arr[3] == 3 &&
+        arr[4] == 4
       );
 
       // Insert 0 at position 0 
@@ -493,12 +454,12 @@ int main() {
 
       assert(
         arr.used() == 6 &&
-        *arr[0] == 0 &&
-        *arr[1] == 1 &&
-        *arr[2] == 2 &&
-        *arr[3] == 2 &&
-        *arr[4] == 3 &&
-        *arr[5] == 4
+        arr[0] == 0 &&
+        arr[1] == 1 &&
+        arr[2] == 2 &&
+        arr[3] == 2 &&
+        arr[4] == 3 &&
+        arr[5] == 4
       );
 
       // Insert 5 at position 6 
@@ -506,13 +467,13 @@ int main() {
 
       assert(
         arr.used() == 7 &&
-        *arr[0] == 0 &&
-        *arr[1] == 1 &&
-        *arr[2] == 2 &&
-        *arr[3] == 2 &&
-        *arr[4] == 3 &&
-        *arr[5] == 4 &&
-        *arr[6] == 5 
+        arr[0] == 0 &&
+        arr[1] == 1 &&
+        arr[2] == 2 &&
+        arr[3] == 2 &&
+        arr[4] == 3 &&
+        arr[5] == 4 &&
+        arr[6] == 5 
       );
     }
 
@@ -523,13 +484,13 @@ int main() {
 
       assert(
         arr.used() == 7 &&
-        *arr[0] == "first" &&
-        *arr[1] == "second 4 times!" &&
-        *arr[2] == "second 4 times!" &&
-        *arr[3] == "second 4 times!" &&
-        *arr[4] == "second 4 times!" &&
-        *arr[5] == "third" &&
-        *arr[6] == "fourth"
+        arr[0] == "first" &&
+        arr[1] == "second 4 times!" &&
+        arr[2] == "second 4 times!" &&
+        arr[3] == "second 4 times!" &&
+        arr[4] == "second 4 times!" &&
+        arr[5] == "third" &&
+        arr[6] == "fourth"
       );
     }
 
@@ -541,12 +502,12 @@ int main() {
 
       assert(
         arr.used() == 6 &&
-        *arr[0] == "1" &&
-        *arr[1] == "2" &&
-        *arr[2] == "3" &&
-        *arr[3] == "4" &&
-        *arr[4] == "5" &&
-        *arr[5] == "6"
+        arr[0] == "1" &&
+        arr[1] == "2" &&
+        arr[2] == "3" &&
+        arr[3] == "4" &&
+        arr[4] == "5" &&
+        arr[5] == "6"
       );
     }
 
@@ -566,30 +527,30 @@ int main() {
 
       assert(
         arr.used() == 2 &&
-        arr[0]->bar == 1 &&
-        arr[0]->foo == "First" &&
-        arr[1]->bar == 2 &&
-        arr[1]->foo == "Second"
+        arr[0].bar == 1 &&
+        arr[0].foo == "First" &&
+        arr[1].bar == 2 &&
+        arr[1].foo == "Second"
       );
 
       arr.insert_new(2, 3, "Third");
 
       assert(
         arr.used() == 3 &&
-        arr[0]->bar == 1 &&
-        arr[0]->foo == "First" &&
-        arr[1]->bar == 2 &&
-        arr[1]->foo == "Second" &&
-        arr[2]->bar == 3 &&
-        arr[2]->foo == "Third"
+        arr[0].bar == 1 &&
+        arr[0].foo == "First" &&
+        arr[1].bar == 2 &&
+        arr[1].foo == "Second" &&
+        arr[2].bar == 3 &&
+        arr[2].foo == "Third"
       );
 
       arr.insert_new(arr.begin() + 1, 02, "Before second!");
 
       assert(
         arr.used() == 4 &&
-        arr[1]->bar == 02 &&
-        arr[1]->foo == "Before second!"
+        arr[1].bar == 02 &&
+        arr[1].foo == "Before second!"
       );
     }
   }
@@ -605,7 +566,7 @@ int main() {
 
     arr.push(str);
 
-    assert(strcmp(arr[0]->get(), "Hello world!!") == 0);
+    assert(strcmp(arr[0].get(), "Hello world!!") == 0);
   }
 
   // ------------------------------------------------------------------
@@ -632,8 +593,8 @@ int main() {
     assert(
       copy2.size() == 3 &&
       copy2.used() == 2 &&
-      *copy2[0] == 100 &&
-      *copy2[1] == 200
+      copy2[0] == 100 &&
+      copy2[1] == 200
     );
   }
 
@@ -680,7 +641,7 @@ int main() {
     assert(
       arr.size() == 4 && // doubled from previous size
       arr.used() == 3 &&
-      *arr[0] == 1 && *arr[1] == 2
+      arr[0] == 1 && arr[1] == 2
     );
   }
 }

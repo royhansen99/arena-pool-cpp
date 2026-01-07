@@ -80,45 +80,28 @@ int main() {
   array.push(2);
   array.push(3);
 
-  *array.at(0); // 1
-  *array[0]; // 1
-  *array.at(1); // 2 
-  *array[1]; // 2 
+  array.at(0); // 1
+  array[0]; // 1
+  array.at(1); // 2 
+  array[1]; // 2 
 
   array.pop(); // Remove last item.
-  array.at(2); // nullptr
-  array[2]; // nullptr
 
   array.erase(0); // Remove item at location 0.
-  array.at(0); // nullptr
-  array[0]; // nullptr
-
-  array.fill(100); // Fill item into first available
-                   // slot, starting from beginning.
-
-  array.at(0); // 100
-  array[0]; // 100
 
   array.push(400);
 
-  array.erase(1);
-
-  array.compact(); // Cover any empty slots by moving forward.
-  *array[0]; // 100
-  *array[1]; // 400
-  *array[2]; // nullptr
+  array[0]; // 2 
+  array[1]; // 400
 
   array.resize(6); // Increase size from 3 to 6.
 
-  // Iterate through items in array, will automatically
-  // skip empty slots.
+  // Iteration 
   for(auto &it : array) {
     std::cout << "Value: " << it << "\n";
   }
-  // If you do a manual increment/decrement for-loop instead,
-  // make sure you check for empty slots by comparing for `nullptr`.
 
-  // Reverse iteration, will automatically skip empty slots.
+  // Reverse iteration
   for (auto it = array.rbegin(); it != array.rend(); ++it) {
     std::cout << "Value: " << *it << "\n";
   }
