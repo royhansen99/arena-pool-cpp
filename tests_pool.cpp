@@ -13,7 +13,7 @@ int main() {
   // Basic allocation bounds
   // ------------------------------------------------------------------
   {
-    Pool<int> pool(3);
+    apc::pool<int> pool(3);
     assert(pool.size() == 3);
     assert(pool.used() == 0);
 
@@ -32,7 +32,7 @@ int main() {
   // Deallocation + reuse (no overflow)
   // ------------------------------------------------------------------
   {
-    Pool<int> pool(2);
+    apc::pool<int> pool(2);
     int* p1 = pool.allocate_new(1);
     int* p2 = pool.allocate_new(2);
     pool.deallocate(p1);
@@ -47,7 +47,7 @@ int main() {
   // grow() and reset() correctness + no corruption
   // ------------------------------------------------------------------
   {
-    Pool<int> pool(1);
+    apc::pool<int> pool(1);
     int* p = pool.allocate_new(42);
     assert(p);
 
@@ -83,8 +83,8 @@ int main() {
   // Arena backend + grow
   // ------------------------------------------------------------------
   {
-    Arena arena(1024 * 10);
-    Pool<int> pool(arena, 2);
+    apc::arena arena(1024 * 10);
+    apc::pool<int> pool(arena, 2);
     assert(pool.size() == 2);
 
     int* a = pool.allocate_new(1);
@@ -101,7 +101,7 @@ int main() {
   // nullptr safety
   // ------------------------------------------------------------------
   {
-    Pool<int> pool(1);
+    apc::pool<int> pool(1);
     pool.deallocate(nullptr);  // must not crash
     int* p = pool.allocate_new(3);
     pool.deallocate(p);
@@ -114,7 +114,7 @@ int main() {
   // 100K alloc/dealloc/grow/reset cycles
   // ------------------------------------------------------------------
   {
-    Pool<int> pool(1000);
+    apc::pool<int> pool(1000);
     int* ptrs[1000] = {nullptr};
 
     for (int cycle = 0; cycle < 100; ++cycle) {
@@ -155,7 +155,7 @@ int main() {
       }
     };
 
-    Pool<Person> pool(3);
+    apc::pool<Person> pool(3);
 
     Person* john = pool.allocate_new("John", 20);
     Person* jane = pool.allocate_new("Jane", 22);
@@ -194,7 +194,7 @@ int main() {
       int age;
     };
 
-    Pool<Person> pool(2);
+    apc::pool<Person> pool(2);
 
     auto* john = pool.allocate(Person{"John", 20});
 

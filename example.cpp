@@ -10,7 +10,7 @@ struct Foo {
 
 int main() {
   // Allocate a 1024 byte arena.
-  Arena arena(1024);
+  apc::arena arena(1024);
 
   arena.size(); // 1024 bytes
 
@@ -20,7 +20,7 @@ int main() {
   arena.used(); // 30 bytes (of 1024 bytes)
 
   // Allocate a pool of 5 Foo's from the arena.
-  Pool<Foo> foo_pool(arena, 5); 
+  apc::pool<Foo> foo_pool(arena, 5); 
 
   // You could also create an independent pool
   // that uses malloc/free instead of an arena,
@@ -54,7 +54,7 @@ int main() {
   arena.used(); // 560 bytes (of 1024 bytes)
 
   // Allocate a 400 byte nested arena.
-  Arena child_arena(arena, 400);
+  apc::arena child_arena(arena, 400);
 
   child_arena.size(); // 400 bytes
   child_arena.used(); // 0 bytes (of 400 bytes)
@@ -71,10 +71,10 @@ int main() {
   arena.reset(); 
   arena.used(); // 0 bytes (of 1024 bytes)
 
-  SArray<int> array(arena, 3);
+  apc::vector<int> array(arena, 3);
   // Ommit the arena parameter to simply use malloc
   // instead.
-  // SArray<int> array(3);
+  // apc::vector<int> array(3);
 
   array.push(1);
   array.push(2);

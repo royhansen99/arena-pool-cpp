@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.1.5
+ * Version: 0.1.6
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -24,27 +24,29 @@
   #include <vector>
 #endif
 
-class Arena {
+namespace apc {
+
+class arena {
 private:
-  Arena* parent;
+  arena* parent;
   char* buffer;
   size_t total_size;
   size_t offset;
 
 public:
-  Arena(const size_t size) :
+  arena(const size_t size) :
     parent(nullptr),
     buffer(static_cast<char*>(malloc(size))),
     total_size(size),
     offset(0) {}
 
-  Arena(Arena &parent, const size_t size) :
+  arena(arena &parent, const size_t size) :
     parent(&parent),
     buffer(static_cast<char*>(parent.allocate_raw(size))),
     total_size(size),
     offset(0) {}
 
-  ~Arena() {
+  ~arena() {
     if(!parent) free(buffer);
   }
 
@@ -131,33 +133,33 @@ public:
 };
 
 template <typename T>
-struct PoolItem {
-  PoolItem* next; 
-  PoolItem* prev; 
+struct pool_item {
+  pool_item* next; 
+  pool_item* prev; 
   T value;
 };
 
 
 template <typename T>
-struct PoolBuffer {
-  PoolItem<T>* buffer;
+struct pool_buffer {
+  pool_item<T>* buffer;
   size_t size;
 };
 
 template <typename T>
-class Pool {
+class pool {
 private:
-  Arena* arena;
-  PoolBuffer<T>* buffers;
+  arena* arena;
+  pool_buffer<T>* buffers;
   size_t buffers_size;
-  PoolItem<T>* free_ptr;
-  PoolItem<T>* use_ptr;
+  pool_item<T>* free_ptr;
+  pool_item<T>* use_ptr;
   size_t _used;
 
   T* allocate_raw() {
     if(!free_ptr) return nullptr;
 
-    PoolItem<T>* chunk = free_ptr;
+    pool_item<T>* chunk = free_ptr;
     free_ptr = free_ptr->next;
 
     if(use_ptr) use_ptr->prev = chunk;
@@ -171,35 +173,35 @@ private:
   }
 
 public:
-  Pool(Arena &_arena, const size_t pool_size) :
+  pool(apc::arena &_arena, const size_t pool_size) :
     arena(&_arena),
-    buffers(arena->allocate_size<PoolBuffer<T>>()),
+    buffers(arena->allocate_size<pool_buffer<T>>()),
     buffers_size(1),
     free_ptr(nullptr),
     use_ptr(nullptr),
     _used(0)
   {
-    buffers[0] = { arena->allocate_size<PoolItem<T>>(pool_size), pool_size };
+    buffers[0] = { arena->allocate_size<pool_item<T>>(pool_size), pool_size };
     reset();
   }
 
-  Pool(const size_t pool_size) :
+  pool(const size_t pool_size) :
     arena(nullptr),
-    buffers(static_cast<PoolBuffer<T>*>(malloc(sizeof(PoolBuffer<T>)))),
+    buffers(static_cast<pool_buffer<T>*>(malloc(sizeof(pool_buffer<T>)))),
     buffers_size(1),
     free_ptr(nullptr),
     use_ptr(nullptr),
     _used(0)
   {
     buffers[0] = {
-      static_cast<PoolItem<T>*>(malloc(sizeof(PoolItem<T>) * pool_size)),
+      static_cast<pool_item<T>*>(malloc(sizeof(pool_item<T>) * pool_size)),
       pool_size
     };
 
     reset();
   }
 
-  ~Pool() {
+  ~pool() {
     if(!std::is_trivially_destructible<T>::value) {
       while(use_ptr) {
         use_ptr->value.~T();
@@ -224,7 +226,7 @@ public:
       }
     }
 
-    PoolItem<T>* previous = nullptr;
+    pool_item<T>* previous = nullptr;
     for(size_t i = 0; i < buffers_size; i++) {
       for(size_t z = 0; z < buffers[i].size; z++) {
         if(previous) previous->next = &(buffers[i].buffer[z]);
@@ -269,8 +271,8 @@ public:
 
     // Use offsetof to safely get the address of the containing PoolItem.
     // We subtract the offset of the 'value' member from the 'ptr'.
-    PoolItem<T>* item = reinterpret_cast<PoolItem<T>*>(
-      reinterpret_cast<char*>(ptr) - offsetof(PoolItem<T>, value)
+    pool_item<T>* item = reinterpret_cast<pool_item<T>*>(
+      reinterpret_cast<char*>(ptr) - offsetof(pool_item<T>, value)
     );
 
     // ptr->prev is only set if allocated, otherwise if an item is free
@@ -291,22 +293,22 @@ public:
   }
 
   bool grow(const size_t size) {
-    PoolItem<T>* new_buffer = nullptr;
+    pool_item<T>* new_buffer = nullptr;
     size_t new_count = buffers_size + 1;
 
     if(arena)
-      new_buffer = arena->allocate_size<PoolItem<T>>(size);
+      new_buffer = arena->allocate_size<pool_item<T>>(size);
     else
-      new_buffer = static_cast<PoolItem<T>*>(malloc(sizeof(PoolItem<T>) * size));
+      new_buffer = static_cast<pool_item<T>*>(malloc(sizeof(pool_item<T>) * size));
 
     if(!new_buffer) return false;
 
-    PoolBuffer<T>* new_list = nullptr;
+    pool_buffer<T>* new_list = nullptr;
 
     if(arena)
-      new_list = arena->allocate_size<PoolBuffer<T>>(new_count);
+      new_list = arena->allocate_size<pool_buffer<T>>(new_count);
     else
-      new_list = static_cast<PoolBuffer<T>*>(realloc(buffers, sizeof(PoolBuffer<T>) * new_count));
+      new_list = static_cast<pool_buffer<T>*>(realloc(buffers, sizeof(pool_buffer<T>) * new_count));
 
     if(!new_list) {
       free(new_buffer);
@@ -349,20 +351,21 @@ public:
 };
 
 template <typename T>
-class ISArray {
+class ivector {
 protected: 
   T* buffer;
   size_t buffer_size;
   size_t _used;
-  size_t _last;
 
-  virtual void _maybe_grow(const size_t count) { }
+  // This virtual function is a performance problem, yes.
+  // Will likely need to stop sharing this `ISArray` base
+  // class between SArrayFixed and SArray, in order to get
+  // rid of the virtual function.
+  inline virtual void _maybe_grow(const size_t &count) {
+  }
 
-  void maybe_grow(const size_t count) {
-    if(count && (
-      !this->buffer_size ||
-      this->buffer_size - this->_used < count
-    )) _maybe_grow(count);
+  inline void maybe_grow(const size_t &count) {
+    _maybe_grow(count);
   }
 
 public:
@@ -392,14 +395,12 @@ public:
     }
   };
 
-  ISArray() :
+  ivector() :
     buffer(nullptr),
     buffer_size(0),
-    _used(0),
-    _last(0)
-  { }
+    _used(0) { }
 
-  ISArray& operator=(const std::initializer_list<T> list) {
+  ivector& operator=(const std::initializer_list<T> list) {
     maybe_grow(list.size());
 
     if(!buffer_size) return *this;
@@ -412,7 +413,7 @@ public:
     return *this;
   }
 
-  ISArray& operator=(const std::initializer_list<T>* list) {
+  ivector& operator=(const std::initializer_list<T>* list) {
     maybe_grow(list->size());
 
     if(!buffer_size) return *this;
@@ -425,7 +426,7 @@ public:
     return *this;
   }
 
-  ISArray& operator=(const ISArray& other) {
+  ivector& operator=(const ivector& other) {
     maybe_grow(other.used());
 
     if(!buffer_size) return *this;
@@ -439,7 +440,7 @@ public:
   }
 
   #ifndef SARRAY_STD_VECTORS_DISABLE
-  ISArray& operator=(const std::vector<T>& other) {
+  ivector& operator=(const std::vector<T>& other) {
     maybe_grow(other.size());
 
     if(!buffer_size) return *this;
@@ -466,11 +467,11 @@ public:
   }
 
   iterator rbegin() const {
-    return iterator(&(buffer[!_used ? _last : _last - 1]), true);
+    return iterator(buffer + _used - 1, true);
   }
 
   const iterator end() const {
-    return iterator(&(buffer[_last]));
+    return iterator(buffer + _used);
   }
 
   const iterator rend() const {
@@ -478,23 +479,19 @@ public:
   }
 
   T* first() {
-    return _used ? &(buffer[0]) : nullptr;
+    return _used ? buffer : nullptr;
   }
 
   const T* first() const {
-    return _used ? &(buffer[0]) : nullptr;
+    return _used ? buffer : nullptr;
   }
 
   T* last() {
-    if(!_used) return nullptr;
-
-    return _used ? &(buffer[_last - 1]) : nullptr;
+    return _used ? buffer + _used - 1 : nullptr;
   }
 
   const T* last() const {
-    if(!_used) return nullptr;
-
-    return &(buffer[_last - 1]);
+    return _used ? buffer + _used - 1 : nullptr;
   }
 
   T& at(const size_t pos) {
@@ -531,7 +528,7 @@ public:
 
 private:
   void insert_make_room_for_count(const size_t &position, const size_t& count) {
-    if(position == _last) return;
+    if(position == _used) return;
 
     if(std::is_trivially_copyable<T>::value) {
       memmove(
@@ -544,7 +541,7 @@ private:
     if(!std::is_trivially_destructible<T>::value ||
       !std::is_trivially_copyable<T>::value
     ) {
-      for(size_t i = _last - 1 + count; i >= (position + count); i--) {
+      for(size_t i = _used - 1 + count; i >= (position + count); i--) {
         if(!std::is_trivially_copyable<T>::value)
           new (&buffer[i]) T(std::move(buffer[i - count]));
 
@@ -559,7 +556,7 @@ public:
   T* insert(size_t position, const size_t count, U &&item) {
     maybe_grow(count);
 
-    if(!count || _used + count > buffer_size || position > _last || position == buffer_size)
+    if(!count || _used + count > buffer_size || position > _used || position == buffer_size)
       return nullptr;
 
     insert_make_room_for_count(position, count);
@@ -571,7 +568,6 @@ public:
         new (&buffer[position + i]) T(std::forward<U>(item)); 
     }
 
-    _last += count;
     _used += count;
 
     return &buffer[position];
@@ -596,7 +592,7 @@ public:
     size_t count = list.size();
     maybe_grow(count);
 
-    if(!count || _used + count > buffer_size || position > _last || position == buffer_size)
+    if(!count || _used + count > buffer_size || position > _used || position == buffer_size)
       return nullptr;
 
     insert_make_room_for_count(position, count);
@@ -612,7 +608,6 @@ public:
       }
     }
 
-    _last += count;
     _used += count;
 
     return &buffer[position];
@@ -626,14 +621,13 @@ public:
   T* insert_new(size_t position, Args&&... args) {
     maybe_grow(1);
 
-    if(_used == buffer_size || position > _last || position == buffer_size)
+    if(_used == buffer_size || position > _used || position == buffer_size)
       return nullptr;
 
     insert_make_room_for_count(position, 1);
 
     new (&buffer[position]) T(std::forward<Args>(args)...);
 
-    _last++;
     _used++;
 
     return &buffer[position];
@@ -651,15 +645,14 @@ public:
     if(_used == buffer_size) return nullptr;
 
     if(std::is_trivially_copyable<T>::value) {
-      memcpy(&(buffer[_last]), &item, sizeof(T));
+      memcpy(buffer + _used, &item, sizeof(T));
     } else {
-      new (&buffer[_last]) T(std::forward<U>(item));
+      new (buffer + _used) T(std::forward<U>(item));
     }
 
     _used++;
-    _last++;
 
-    return &(buffer[_last - 1]);
+    return buffer + _used - 1;
   }
 
   template <typename... Args>
@@ -668,16 +661,15 @@ public:
 
     if(_used == buffer_size) return nullptr;
 
-    new (&(buffer[_last])) T(std::forward<Args>(args)...);
+    new (buffer + _used) T(std::forward<Args>(args)...);
 
     _used++;
-    _last++;
 
-    return &(buffer[_last - 1]);
+    return buffer + _used - 1;
   }
 
   void pop() {
-    if(_used) erase(_last - 1);
+    if(_used) erase(_used - 1);
   }
 
   void erase_ptr(const T *item) {
@@ -690,18 +682,23 @@ public:
     if(!std::is_trivially_destructible<T>::value)
       buffer[pos].~T();
 
-    for(size_t i = pos + 1; i < _used; i++) {
-      if(std::is_trivially_copyable<T>::value)
-        memcpy(&(buffer[i - 1]), &(buffer[i]), sizeof(T));
-      else
-        new (&buffer[i - 1]) T(std::move(buffer[i]));
+    if(pos < _used - 1) {
+      if(std::is_trivially_copyable<T>::value && std::is_trivially_destructible<T>::value) {
+        memmove(buffer + pos, buffer + pos + 1, sizeof(T) * (_used - 1 - pos));
+      } else {
+        for(size_t i = pos + 1; i < _used; i++) {
+          if(std::is_trivially_copyable<T>::value)
+            memcpy(&(buffer[pos - 1]), &(buffer[pos]), sizeof(T));
+          else
+            new (&buffer[i - 1]) T(std::move(buffer[i]));
 
-      if(!std::is_trivially_destructible<T>::value)
-        buffer[i].~T();
+          if(!std::is_trivially_destructible<T>::value)
+            buffer[i].~T();
+        }
+      }
     }
 
     _used--;
-    _last--;
   }
 
   void reset() {
@@ -710,7 +707,6 @@ public:
         buffer[i].~T();
 
     _used = 0;
-    _last = 0;
   }
 
   size_t used() const {
@@ -725,108 +721,106 @@ public:
     return _used == 0;
   }
 
-  Arena* arena() const {
+  arena* arena() const {
     return nullptr;
   }
 };
 
 template <typename T, bool Trivial>
-class SArrayFixedMixin : public ISArray<T> {
-  ~SArrayFixedMixin() {
+class vector_fixed_mixin : public ivector<T> {
+  ~vector_fixed_mixin() {
     for(size_t i = 0; i < this->_used; i++)
       this->buffer[i].~T();
   }
 };
 
 template <typename T>
-class SArrayFixedMixin<T, true> {
+class vector_fixed_mixin<T, true> {
 };
 
 template <typename T, size_t N>
-class SArrayFixed : public ISArray<T>, public SArrayFixedMixin<T, std::is_trivially_destructible<T>::value> {
+class vector_fixed final : public ivector<T>, public vector_fixed_mixin<T, std::is_trivially_destructible<T>::value> {
   char static_buffer[sizeof(T) * N];
 
 public:
-  using ISArray<T>::operator=;
+  using ivector<T>::operator=;
 
-  SArrayFixed() : ISArray<T>() {
+  vector_fixed() : ivector<T>() {
     this->buffer = reinterpret_cast<T*>(static_buffer);
     this->buffer_size = N;
   }
 
-  SArrayFixed(const std::initializer_list<T> list) : SArrayFixed() {
+  vector_fixed(const std::initializer_list<T> list) : vector_fixed() {
     this->operator=(&list);
   }
 
   #ifndef SARRAY_STD_VECTORS_DISABLE
-  SArrayFixed(const std::vector<T>& other) : SArrayFixed() {
+  vector_fixed(const std::vector<T>& other) : vector_fixed() {
     this->operator=(other);
   }
   #endif
 
-  SArrayFixed(const ISArray<T>& other) : SArrayFixed() {
+  vector_fixed(const ivector<T>& other) : vector_fixed() {
     this->operator=(other);
   }
 };
 
 template <typename T>
-class SArray : public ISArray<T> {
-  Arena* _arena;
+class vector final : public ivector<T> {
+  arena* _arena;
 
 protected:
   void moved_reset() {
     this->buffer = nullptr;
     this->buffer_size = 0;
     this->_used = 0;
-    this->_last = 0;
   }
 
-  void _maybe_grow(const size_t count) override {
+  inline void _maybe_grow(const size_t &count) override {
     if(!this->buffer_size) {
       this->init(count);
 
       return;
     }
 
-    const size_t remaining = this->buffer_size - this->_used;
-
-    if(remaining > count) return;
+    if((this->buffer_size - this->_used) >= count) return;
 
     size_t new_size = this->buffer_size * 2;
+    size_t min = this->_used + count; 
 
-    if(new_size < (this->_used + count)) new_size = this->_used + count;
+    if(new_size < min) new_size = min;
 
     this->resize(new_size);
   }
 
 public:
-  using ISArray<T>::operator=;
+  using ivector<T>::operator=;
 
-  SArray(const size_t size = 0) : ISArray<T>(), _arena(nullptr) {
+  vector(const size_t size = 0) : ivector<T>(), _arena(nullptr) {
     init(size);
   }
 
-  SArray(const std::initializer_list<T> list) :
-    SArray(list.size())
+  vector(const std::initializer_list<T> list) :
+    vector(list.size())
   {
     this->operator=(&list);
   }
 
-  SArray(const size_t size, const std::initializer_list<T> list) :
-    SArray(size)
+  vector(const size_t size, const std::initializer_list<T> list) :
+    vector(size)
   {
     this->operator=(&list);
   }
 
   #ifndef SARRAY_STD_VECTORS_DISABLE
-  SArray(const std::vector<T>& other) :
-    SArray(other.size())
+  vector(const std::vector<T>& other) :
+    vector(other.size())
   {
     this->operator=(other);
   }
 
-  SArray(const size_t size, const std::vector<T>& other) :
-    SArray(size)
+  vector(const size_t size, const std::vector<T>& other) :
+    vector(size)
   {
     this->operator=(other);
   }
@@ -834,63 +828,62 @@ public:
 
   // Move constructor.
   // (Can only move SArray, not SArrayFixed)
-  SArray(SArray<T>&& other) : SArray() {
+  vector(vector<T>&& other) : vector() {
     if(other.arena()) _arena = other.arena();
 
     this->buffer = other.buffer;
     this->_used = other._used;
     this->buffer_size = other.buffer_size;
-    this->_last = 5;
 
     other.moved_reset();
   }
 
-  SArray(const SArray<T>& other) :
-    SArray(other._arena, other.buffer_size)
+  vector(const vector<T>& other) :
+    vector(other._arena, other.buffer_size)
   {
     this->operator=(other);
   }
 
-  SArray(const ISArray<T>& other) :
-    SArray(other.size())
+  vector(const ivector<T>& other) :
+    vector(other.size())
   {
     this->operator=(other);
   }
 
-  SArray(const size_t size, const ISArray<T>& other) :
-    SArray(size)
+  vector(const size_t size, const ivector<T>& other) :
+    vector(size)
   {
     this->operator=(other);
   }
 
-  SArray(Arena* __arena, const size_t size) : ISArray<T>(), _arena(nullptr) {
+  vector(arena* __arena, const size_t size) : ivector<T>(), _arena(nullptr) {
     if(__arena) init(*__arena, size);
     else init(size);
   }
 
-  SArray(Arena &__arena, const size_t size) : ISArray<T>(), _arena(nullptr) {
+  vector(arena &__arena, const size_t size) : ivector<T>(), _arena(nullptr) {
     init(__arena, size);
   }
 
-  SArray(Arena &__arena, const size_t size, const std::initializer_list<T> list) :
-    SArray(__arena, size) 
+  vector(arena &__arena, const size_t size, const std::initializer_list<T> list) :
+    vector(__arena, size) 
   {
     this->operator=(&list);
   }
 
-  SArray(Arena &__arena, const size_t size, const std::vector<T>& other) :
-    SArray(__arena, size) 
+  vector(arena &__arena, const size_t size, const std::vector<T>& other) :
+    vector(__arena, size) 
   {
     this->operator=(other);
   }
 
-  SArray(Arena &__arena, const size_t size, const ISArray<T>& other) :
-    SArray(__arena, size) 
+  vector(arena &__arena, const size_t size, const ivector<T>& other) :
+    vector(__arena, size) 
   {
     this->operator=(other);
   }
 
-  ~SArray() {
+  ~vector() {
     if(!std::is_trivially_destructible<T>::value) {
       for(size_t i = 0; i < this->_used; i++)
         this->buffer[i].~T();
@@ -900,7 +893,7 @@ public:
       free(this->buffer);
   }
 
-  SArray& operator=(const SArray& other) = default;
+  vector& operator=(const vector& other) = default;
 
   void init(const size_t size) {
     if(!size || _arena || this->buffer_size) return;
@@ -910,7 +903,7 @@ public:
     if(this->buffer) this->buffer_size = size;
   }
 
-  void init(Arena &__arena, const size_t size) {
+  void init(arena &__arena, const size_t size) {
     if(!size || _arena || this->buffer_size) return;
 
     auto* new_buffer = __arena.allocate_size<T>(size);
@@ -980,7 +973,6 @@ public:
 
       if(this->_used > size) {
         this->_used = size;
-        this->_last = size;
       }
 
       return true;
@@ -997,7 +989,9 @@ public:
     return 0;
   }
 
-  Arena* arena() const {
+  arena* arena() const {
     return _arena;
   }
 };
+
+}

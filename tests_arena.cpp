@@ -14,7 +14,7 @@ int main() {
   {
     {
       size_t three_ints = sizeof(int) * 3;
-      Arena arena(three_ints);
+      apc::arena arena(three_ints);
       assert(arena.size() == three_ints);
       assert(arena.used() == 0);
 
@@ -45,7 +45,7 @@ int main() {
     }
 
     {
-      Arena arena(1000);
+      apc::arena arena(1000);
       std::string* a = arena.allocate_new<std::string>("Hello world!");
       std::string* b = arena.allocate_new<std::string>(std::string("Test"));
       std::string item("Test");
@@ -61,7 +61,7 @@ int main() {
     }
 
     {
-      Arena arena(1000);
+      apc::arena arena(1000);
 
       std::string* a = arena.allocate<std::string>(
         std::string("Hello")
@@ -85,8 +85,8 @@ int main() {
   // Child arena 
   // ------------------------------------------------------------------
   {
-    Arena arena(512);
-    Arena child_arena(arena, 256);
+    apc::arena arena(512);
+    apc::arena child_arena(arena, 256);
 
     assert(
       child_arena.size() == 256 &&
@@ -125,8 +125,8 @@ int main() {
   // 500 alloc/reset cycles
   // ------------------------------------------------------------------
   {
-    Arena arena(256);
-    Arena child_arena(arena, 128);
+    apc::arena arena(256);
+    apc::arena child_arena(arena, 128);
 
     for(int i = 0; i < 500; i++) {
       char* a = child_arena.allocate_size<char>(20);

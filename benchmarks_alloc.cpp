@@ -34,7 +34,7 @@ int main() {
       Benchmark& benchmark = b[i];
       bool& single_free = benchmark.single_free;
       size_t& N = benchmark.N;
-      const size_t CAP = N / 10;   // 1 million per buffer
+      const size_t CAP = N;   // 1 million per buffer
 
       printf(benchmark.description, N);
 
@@ -42,7 +42,7 @@ int main() {
       // Arena
       // --------------------------------------------------------------
       if(single_free) { // Only run this benchmark for single frees
-        Arena arena(1024ULL * 1024 * 1024);  // 1 GiB
+        apc::arena arena(1024ULL * 1024 * 1024);  // 1 GiB
         int* p = static_cast<int*>(arena.allocate_raw(N, alignof(int)));
         auto t0 = Clock::now();
         for (size_t i = 0; i < N; ++i) {
@@ -66,8 +66,8 @@ int main() {
       // Pool (Arena)
       // --------------------------------------------------------------
       {
-        Arena arena(1024ULL * 1024 * 1024);  // 1 GiB
-        Pool<int> pool(arena, CAP);
+        apc::arena arena(1024ULL * 1024 * 1024);  // 1 GiB
+        apc::pool<int> pool(arena, CAP);
 
         auto t0 = Clock::now();
         for (size_t i = 0; i < N; ++i) {
@@ -91,7 +91,7 @@ int main() {
       // Pool (malloc)
       // --------------------------------------------------------------
       {
-        Pool<int> pool(CAP);
+        apc::pool<int> pool(CAP);
 
         auto t0 = Clock::now();
         for (size_t i = 0; i < N; ++i) {
@@ -112,15 +112,14 @@ int main() {
       }
 
       // --------------------------------------------------------------
-      // SArray (arena) 
+      // apc::vector (reserve) 
       // --------------------------------------------------------------
       {
-        Arena a((sizeof(int) * CAP) + (sizeof(bool) * CAP));
-        SArray<int> arr(a, CAP);
+        apc::vector<int> arr(CAP);
 
         auto t0 = Clock::now();
         for (size_t i = 0; i < N; ++i)
-          arr.push_new(i);
+          arr.push(i);
         auto t1 = Clock::now();
         double alloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
@@ -135,19 +134,19 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "SArray (arena)          alloc: " << std::setw(6) << alloc_ns
+        std::cout << "apc::vector (reserve)         alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
-      // SArray (malloc) 
+      // apc::vector (dynamic) 
       // --------------------------------------------------------------
       {
-        SArray<int> arr(CAP);
+        apc::vector<int> arr;
 
         auto t0 = Clock::now();
         for (size_t i = 0; i < N; ++i)
-          arr.push_new(i);
+          arr.push(i);
         auto t1 = Clock::now();
         double alloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
@@ -162,7 +161,7 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "SArray (malloc)         alloc: " << std::setw(6) << alloc_ns
+        std::cout << "apc::vector (dynamic)         alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       }
 

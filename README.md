@@ -4,7 +4,7 @@ A very fast (zero-overhead) memory allocator with an arena/bump-allocator,
 a pool-allocator, and a vector-like array-allocator.  
 Single header c++11 library.
 
-__Arena allocator__  
+__apc::arena allocator__  
 Essentially a bump-allocator with a pre-allocated  
 amount of memory reserved up-front only once. As you allocate portions  
 inside the arena-memory it will simply bump a pointer offset.  
@@ -13,7 +13,7 @@ As a result of these things, allocations and clearing an arena is extremely
 fast with zero-overhead. Memory is freed when the class-destructor is called.  
 Nested arenas is also supported!
 
-__Pool allocator__  
+__apc::pool allocator__  
 A contiguous object pool using a combined doubly/singly-linked free/used list.  
 Each PoolItem<T> contains a prev/next pointer and the user object T.  
 Allocation pops from the free list; deallocation pushes to the head.  
@@ -25,7 +25,7 @@ memory using malloc/free.
 If the pool manages it's own memory, free happens when the class-destructor  
 is called.
 
-__SArray allocator__  
+__apc::vector allocator__  
 Works in much the same way as `std::vector`.  
 Will pre-allocate a specified size, with the ability to shrink/grow.  
 Shrink is a manual operation.  
@@ -48,7 +48,7 @@ struct Foo {
 
 int main() {
   // Allocate a 1024 byte arena.
-  Arena arena(1024);
+  apc::arena arena(1024);
 
   arena.size(); // 1024 bytes
 
@@ -58,14 +58,14 @@ int main() {
   arena.used(); // 30 bytes (of 1024 bytes)
 
   // Allocate a pool of 5 Foo's from the arena.
-  Pool<Foo> foo_pool(arena, 5); 
+  apc::pool<Foo> foo_pool(arena, 5); 
 
   // You could also create an independent pool
   // that uses malloc/free instead of an arena,
   // by only providing a single size argument.
   // The pool will automatically free memory
   // when it goes out of scope.
-  // Pool<Foo> foo_pool(5); 
+  // apc::pool<Foo> foo_pool(5); 
 
   arena.used(); // 208 bytes (of 1024 bytes)
 
@@ -92,7 +92,7 @@ int main() {
   arena.used(); // 560 bytes (of 1024 bytes)
 
   // Allocate a 400 byte nested arena.
-  Arena child_arena(arena, 400);
+  apc::arena child_arena(arena, 400);
 
   child_arena.size(); // 400 bytes
   child_arena.used(); // 0 bytes (of 400 bytes)
@@ -109,10 +109,10 @@ int main() {
   arena.reset(); 
   arena.used(); // 0 bytes (of 1024 bytes)
 
-  SArray<int> array(arena, 3);
+  apc::vector<int> array(arena, 3);
   // Ommit the arena parameter to simply use malloc
   // instead.
-  // SArray<int> array(3);
+  // apc::vector<int> array(3);
 
   array.push(1);
   array.push(2);
@@ -160,38 +160,38 @@ __Smaller numbers is better!__
 
 ```
 Benchmarking 10000000 int allocations with a single cheap mass-dealloc/reset
-Arena                   alloc:   0.43 ns  dealloc:   0.00 ns
-Pool (Arena)            alloc:   0.38 ns  dealloc:   0.05 ns
-Pool (malloc)           alloc:   0.38 ns  dealloc:   0.05 ns
-SArray (arena)          alloc:   0.34 ns  dealloc:   0.00 ns
-SArray (malloc)         alloc:   0.62 ns  dealloc:   0.00 ns
-std::vector (reserve()) alloc:   0.60 ns  dealloc:   0.00 ns
-std::vector (dynamic)   alloc:   1.26 ns  dealloc:   0.00 ns
-std::list               alloc:  10.96 ns  dealloc:  15.85 ns
+Arena                   alloc:   1.03 ns  dealloc:   0.00 ns
+Pool (Arena)            alloc:   4.87 ns  dealloc:   1.42 ns
+Pool (malloc)           alloc:   1.62 ns  dealloc:   0.82 ns
+apc::vector (reserve)         alloc:   2.28 ns  dealloc:   0.00 ns
+apc::vector (dynamic)         alloc:   2.34 ns  dealloc:   0.00 ns
+std::vector (reserve()) alloc:   0.49 ns  dealloc:   0.00 ns
+std::vector (dynamic)   alloc:   1.38 ns  dealloc:   0.00 ns
+std::list               alloc:  11.36 ns  dealloc:  11.74 ns
 ```
 
 ```
 Benchmarking 100000 int allocations with individual expensive dealloc
 Arena                   (individual dealloc not supported)
-Pool (Arena)            alloc:   0.35 ns  dealloc:   0.04 ns
-Pool (malloc)           alloc:   0.34 ns  dealloc:   0.04 ns
-SArray (arena)          alloc:   0.36 ns  dealloc:  95.50 ns
-SArray (malloc)         alloc:   0.60 ns  dealloc:  94.42 ns
-std::vector (reserve()) alloc:   0.73 ns  dealloc: 3477.17 ns
-std::vector (dynamic)   alloc:   1.45 ns  dealloc: 3506.30 ns
-std::list               alloc:   8.51 ns  dealloc:  37.08 ns
+Pool (Arena)            alloc:   0.93 ns  dealloc:   0.39 ns
+Pool (malloc)           alloc:   0.64 ns  dealloc:   0.39 ns
+apc::vector (reserve)         alloc:   2.25 ns  dealloc: 3366.87 ns
+apc::vector (dynamic)         alloc:   2.74 ns  dealloc: 3374.91 ns
+std::vector (reserve()) alloc:   0.77 ns  dealloc: 3359.84 ns
+std::vector (dynamic)   alloc:   0.59 ns  dealloc: 3363.53 ns
+std::list               alloc:  10.01 ns  dealloc:  11.45 ns
 ```
 
 ### API Documentation
 
-__Arena__:  
+__apc::arena__:  
 (Destructor will free allocated memory, unless an arena is a child  
 in which case the underlying memory belongs to a parent, and will  
 be freed by the parent instead)  
 | Function Name                          | Description                                                                                     |
 |----------------------------------------|-------------------------------------------------------------------------------------------------|
-| `Arena Arena(i)`                       | Construct a new `Arena` instance of `i` bytes.                                                |
-| `Arena Arena(parent, i)`               | Construct a new child `Arena` which is nested inside `parent`, child will be `i` bytes.       |
+| `apc::arena arena(i)`                       | Construct a new arena instance of `i` bytes.                                                |
+| `apc::arena arena(parent, i)`               | Construct a new `child` arena which is nested inside `parent`, child will be `i` bytes.       |
 | `T* allocate_size<T>(i)`                   | Allocate a chunk inside the arena with size: sizeof(T) * i                                   |
 | `T* allocate<T>(item)`                   | Allocate space for `T` and copy `item` into it.                                   |
 | `T* allocate_new<T>(args...)`         | Allocate a single item of type `T`, if it is a class `args` should be constructor parameters. Size: sizeof(T) |
@@ -201,15 +201,15 @@ be freed by the parent instead)
 | `size_t size()`                        | Get the total bytes/chars allocated in the arena.                                             |
 | `size_t used()`                        | Get the total bytes/chars used in the arena.                                                 |
 
-__Pool__:  
+__apc::pool__:  
 (Destructor will free allocated memory when pool owns it's own memory and  
 does not use an arena, otherwise if using an arena the arena will take care  
 of freeing memory in which case the underlying memory belongs to a parent,  
 and will be freed by the parent instead)  
 | Function Name                     | Description                                                                                     |
 |-----------------------------------|-------------------------------------------------------------------------------------------------|
-| `Pool<T> Pool(i)`                 | Construct a new `Pool` of type `T` with a count of `i`, allocated with malloc/free, allocation size: sizeof(T) * `i` |
-| `Pool<T> Pool(arena, i)`          | Construct a new `Pool` of type `T` with a count of `i`, allocated in `arena`, allocation size: sizeof(T) * `i` |
+| `apc::pool<T> pool(i)`                 | Construct a new `pool` of type `T` with a count of `i`, allocated with malloc/free, allocation size: sizeof(T) * `i` |
+| `apc::pool<T> pool(arena, i)`          | Construct a new `pool` of type `T` with a count of `i`, allocated in `arena`, allocation size: sizeof(T) * `i` |
 | `T* allocate(item)`           | Grab a single allocation from the pool and copy item into it.                                  |
 | `T* allocate_new(args...)`        | Grab a single allocation from the pool, if it is a class it will use `args` as constructor parameters. |
 | `void deallocate(allocate_ptr)`   | Release a single allocation by providing a pointer that was received from a previous `allocate()`/`allocate_new()` call. Will also call destructor if non-trivial T. |
@@ -227,14 +227,14 @@ or not. If it is unsuccessful the Arena/Pool remains intact without
 growing (the Arena is not reset when grow fails).
 
 
-__SArray__: (Stretchy Array)  
+__apc::vector__:  
 (Destructor will free allocated memory when pool owns it's own memory and  
 does not use an arena, otherwise if using an arena the arena will take care  
 of freeing memory in which case the underlying memory belongs to a parent,  
 and will be freed by the parent instead)  
 | Function Name                     | Description                                                                                          |
 |-----------------------------------|------------------------------------------------------------------------------------------------------|
-| `SArray<T> SArray(i)`             | Construct a new `SArray` of type `T` with a count of `i`, allocated with malloc/free.              |
+| `apc::vector<T> vector(i)`             | Construct a new `vector` of type `T` with a count of `i`, allocated with malloc/free.              |
 | `T& at(pos)`                      | Get item at position. Will return `nullptr` if empty slot.                                         |
 | `T& operator[]`                   | Array accessor s_array[2], works the same as `at(2)`.                                             |
 | `T* first()`                      | Get the first item in the array. `nullptr` if array is empty.                                     |
@@ -257,11 +257,11 @@ and will be freed by the parent instead)
 | `bool empty()`                    | Check if empty.                                                                                    |
 
 
-__SArrayFixed__: (Fixed size array)  
-Mostly the same as SArray, except that it is fixed size.  
+__apc::vector_fixed__: (Fixed size vector)  
+Mostly the same as apc::vector, except that it is fixed size.  
 
-`SArrayFixed<T, size>`  
+`apc::vector_fixed<T, size>`  
 
-These method are not available on `SArrayFixed`, since it is fixed-size:  
+These method are not available on `apc::vector_fixed`, since it is fixed-size:  
 - resize()  
 - shrink\_to\_fit()  

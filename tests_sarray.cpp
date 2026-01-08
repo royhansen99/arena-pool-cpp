@@ -5,13 +5,13 @@
 #include <iostream>
 
 int main() {
-  std::cout << "Running SArray tests...\n";
+  std::cout << "Running apc::vector tests...\n";
 
   // ------------------------------------------------------------------
   // Basic usage (malloc) 
   // ------------------------------------------------------------------
   {
-    SArray<int> arr(4);
+    apc::vector<int> arr(4);
 
     assert(
       arr.size() == 4 &&
@@ -135,7 +135,7 @@ int main() {
   // Constuctor assignment 
   // ------------------------------------------------------------------
   {
-    SArray<int> arr(3, {1,2,3});
+    apc::vector<int> arr(3, {1,2,3});
     
     assert(
       arr.size() == 3 &&
@@ -145,8 +145,8 @@ int main() {
       arr[2] == 3
     );
 
-    Arena arena(32);
-    SArray<int> arena_arr(arena, 3, {1,2,3});
+    apc::arena arena(32);
+    apc::vector<int> arena_arr(arena, 3, {1,2,3});
 
     assert(
       arena_arr.size() == 3 &&
@@ -156,7 +156,7 @@ int main() {
       arena_arr[2] == 3
     );
 
-    SArrayFixed<int, 3> fixed({1,2,3});
+    apc::vector_fixed<int, 3> fixed({1,2,3});
 
     assert(
       fixed.size() == 3 &&
@@ -171,7 +171,7 @@ int main() {
   // Iteration 
   // ------------------------------------------------------------------
   {
-    SArray<int> arr(6);
+    apc::vector<int> arr(6);
     arr.push(0);
     arr.push(1);
     arr.push(2);
@@ -222,8 +222,8 @@ int main() {
   // Usage with Arena 
   // ------------------------------------------------------------------
   {
-    Arena a(1024);
-    SArray<int> arr(a, 2);
+    apc::arena a(1024);
+    apc::vector<int> arr(a, 2);
 
     assert(
       arr.size() == 2 &&
@@ -263,7 +263,7 @@ int main() {
       int age;
     };
 
-    SArray<Person> arr(3);
+    apc::vector<Person> arr(3);
     Person z{"John", 20};
 
     assert(
@@ -292,7 +292,7 @@ int main() {
       Person(const char* n, int &&a): name(n), age(a) { }
     };
 
-    SArray<Person> arr(3);
+    apc::vector<Person> arr(3);
 
     arr.push_new("John", 2);
     arr.push_new("Jane", 3);
@@ -324,10 +324,10 @@ int main() {
   }
 
   // ------------------------------------------------------------------
-  // SArrayFixed usage
+  // apc::vector_fixed usage
   // ------------------------------------------------------------------
   {
-    SArrayFixed<int, 10> fixed = {1,2,3};
+    apc::vector_fixed<int, 10> fixed = {1,2,3};
 
     assert(
       fixed.size() == 10 &&
@@ -347,16 +347,16 @@ int main() {
     );
 
     // Out of bounds
-    SArrayFixed<int, 2> f = {1,2};
+    apc::vector_fixed<int, 2> f = {1,2};
     assert(f.push(3) == nullptr);
   }
 
   // ------------------------------------------------------------------
-  // SArrayFixed and SArray cross assignments 
+  // apc::vector_fixed and apc::vector cross assignments 
   // ------------------------------------------------------------------
   {
-    SArray<int> arr(30, {1,2,3});
-    SArrayFixed<int, 30> fixed = {4,5,6};
+    apc::vector<int> arr(30, {1,2,3});
+    apc::vector_fixed<int, 30> fixed = {4,5,6};
 
     arr = fixed;
 
@@ -376,7 +376,7 @@ int main() {
       fixed[2] == 3 
     );
 
-    SArrayFixed<int, 10> fixed2(arr);
+    apc::vector_fixed<int, 10> fixed2(arr);
 
     assert(
       fixed2[0] == 1 && 
@@ -384,7 +384,7 @@ int main() {
       fixed2[2] == 3 
     );
 
-    SArray<int> arr2(10, fixed);
+    apc::vector<int> arr2(10, fixed);
 
     assert(
       arr2[0] == 1 && 
@@ -392,8 +392,8 @@ int main() {
       arr2[2] == 3 
     );
 
-    Arena arena(100);
-    SArray<int> arena_arr(arena, 3, fixed);
+    apc::arena arena(100);
+    apc::vector<int> arena_arr(arena, 3, fixed);
 
     assert(
       arena_arr[0] == 1 && 
@@ -408,7 +408,7 @@ int main() {
   {
     std::vector<int> vec = {1,2,3};
 
-    SArrayFixed<int, 10> arr(vec);
+    apc::vector_fixed<int, 10> arr(vec);
 
     assert(
       arr.used() == 3 &&
@@ -435,7 +435,7 @@ int main() {
   {
     // Insert int
     {
-      SArray<int> arr(10, {1,3,4});
+      apc::vector<int> arr(10, {1,3,4});
 
       // Insert 2, two times, at position 1
       arr.insert(++arr.begin(), 2, 2); 
@@ -479,7 +479,7 @@ int main() {
 
     // Insert std::string
     {
-      SArray<std::string> arr(10, {"first", "third", "fourth"});
+      apc::vector<std::string> arr(10, {"first", "third", "fourth"});
       arr.insert(++arr.begin(), 4, "second 4 times!"); 
 
       assert(
@@ -496,7 +496,7 @@ int main() {
 
     // Insert initializer list
     {
-      SArray<std::string> arr(10, {"1", "5", "6"});
+      apc::vector<std::string> arr(10, {"1", "5", "6"});
 
       arr.insert(++arr.begin(), {"2", "3", "4"});
 
@@ -520,7 +520,7 @@ int main() {
         Foo(int _bar, std::string _foo) : bar(_bar), foo(_foo) {}
       };
 
-      SArray<Foo> arr(10);
+      apc::vector<Foo> arr(10);
 
       arr.insert_new(0, 2, "Second");
       arr.insert_new(0, 1, "First");
@@ -559,7 +559,7 @@ int main() {
   // Usage with std::unique_ptr 
   // ------------------------------------------------------------------
   {
-    SArray<std::unique_ptr<char>> arr(10);
+    apc::vector<std::unique_ptr<char>> arr(10);
 
     char* str = new char[20];
     strcpy(str, "Hello world!!");
@@ -573,10 +573,10 @@ int main() {
   // Copy constructor 
   // ------------------------------------------------------------------
   {
-    Arena arena(300);
-    SArray<int> org(arena, 10, {1,2,3,4,5,6});
+    apc::arena arena(300);
+    apc::vector<int> org(arena, 10, {1,2,3,4,5,6});
 
-    SArray<int> copy(org);
+    apc::vector<int> copy(org);
     std::string copy_str;
 
     for(const auto &i : copy)
@@ -586,9 +586,9 @@ int main() {
 
     assert(org.arena() == copy.arena());
 
-    SArrayFixed<int, 3> fixed({100,200});
+    apc::vector_fixed<int, 3> fixed({100,200});
 
-    SArray<int> copy2(fixed);
+    apc::vector<int> copy2(fixed);
     
     assert(
       copy2.size() == 3 &&
@@ -602,10 +602,10 @@ int main() {
   // Move constructor 
   // ------------------------------------------------------------------
   {
-    Arena arena(100);
-    SArray<int> org(arena, 5, {1,2,3,4,5});
+    apc::arena arena(100);
+    apc::vector<int> org(arena, 5, {1,2,3,4,5});
 
-    SArray<int> copy(std::move(org));
+    apc::vector<int> copy(std::move(org));
 
     std::string copy_str;
     for(const auto &i : copy)
@@ -621,10 +621,10 @@ int main() {
   }
 
   // ------------------------------------------------------------------
-  // Automatically grow SArray 
+  // Automatically grow apc::vector 
   // ------------------------------------------------------------------
   {
-    SArray<int> arr;
+    apc::vector<int> arr;
     
     assert(arr.size() == 0);
 
