@@ -38,7 +38,7 @@ Simply drop the single header `Arena.h` file directly in to your project.
 
 ```cpp
 /* (From ./example.cpp in this repo) */
-#include "./Arena.h"
+#include "./arena.h"
 #include <iostream>
 
 struct Foo {
