@@ -1,6 +1,6 @@
 // COMPILE: g++ -std=c++11 -Wall -fsanitize=address tests_arena.cpp
 
-#include "./arena.h"
+#include "../src/arena.h"
 #include <cassert>
 #include <cstring>
 #include <iostream>

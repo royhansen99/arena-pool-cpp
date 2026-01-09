@@ -1,8 +1,10 @@
 # arena-pool-cpp
 
-A very fast (zero-overhead) memory allocator with an arena/bump-allocator,  
-a pool-allocator, and a vector-like array-allocator.  
+A very fast memory allocator with an arena/bump-allocator, a pool-allocator,  
+and a vector-like array-allocator. Also includes a string implementation.  
 Single header c++11 library.
+
+Documentation for the string implementation is in a separate file: [STRING.md](STRING.md) 
 
 __apc::arena allocator__  
 Essentially a bump-allocator with a pre-allocated  

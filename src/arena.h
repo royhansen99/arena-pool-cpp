@@ -1,12 +1,13 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.1.7
+ * Version: 0.1.8
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
- * Description: A very fast (zero-overhead) memory allocator with
+ * Description: A very fast memory allocator with
  *              an arena/bump-allocator, a pool-allocator, and a
- *              vector-like array-allocator.
+ *              vector-like array-allocator. Also includes a string
+ *              implementation.
  *              Single header c++11 library.
  */
 #pragma once
