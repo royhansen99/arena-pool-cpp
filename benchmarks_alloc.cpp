@@ -1,4 +1,4 @@
-// COMPILE: g++ -std=c++11 -O3 -march=native -DNDEBUG benchmarks_alloc.cpp 
+// COMPILE: g++ -std=c++11 -O3 -march=native benchmarks_alloc.cpp 
 
 #include "./arena.h"
 #include <vector>
@@ -134,7 +134,7 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::vector (reserve)         alloc: " << std::setw(6) << alloc_ns
+        std::cout << "apc::vector (reserve)   alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       }
 
@@ -161,7 +161,7 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::vector (dynamic)         alloc: " << std::setw(6) << alloc_ns
+        std::cout << "apc::vector (dynamic)   alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       }
 

@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.1.6
+ * Version: 0.1.7
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -357,17 +357,6 @@ protected:
   size_t buffer_size;
   size_t _used;
 
-  // This virtual function is a performance problem, yes.
-  // Will likely need to stop sharing this `ISArray` base
-  // class between SArrayFixed and SArray, in order to get
-  // rid of the virtual function.
-  inline virtual void _maybe_grow(const size_t &count) {
-  }
-
-  inline void maybe_grow(const size_t &count) {
-    _maybe_grow(count);
-  }
-
 public:
   class iterator {
     T* it;
@@ -401,8 +390,6 @@ public:
     _used(0) { }
 
   ivector& operator=(const std::initializer_list<T> list) {
-    maybe_grow(list.size());
-
     if(!buffer_size) return *this;
 
     if(_used) reset();
@@ -414,8 +401,6 @@ public:
   }
 
   ivector& operator=(const std::initializer_list<T>* list) {
-    maybe_grow(list->size());
-
     if(!buffer_size) return *this;
 
     if(_used) reset();
@@ -427,8 +412,6 @@ public:
   }
 
   ivector& operator=(const ivector& other) {
-    maybe_grow(other.used());
-
     if(!buffer_size) return *this;
 
     if(_used) reset();
@@ -441,8 +424,6 @@ public:
 
   #ifndef SARRAY_STD_VECTORS_DISABLE
   ivector& operator=(const std::vector<T>& other) {
-    maybe_grow(other.size());
-
     if(!buffer_size) return *this;
 
     if(_used) reset();
@@ -554,8 +535,6 @@ private:
 public:
   template <typename U>
   T* insert(size_t position, const size_t count, U &&item) {
-    maybe_grow(count);
-
     if(!count || _used + count > buffer_size || position > _used || position == buffer_size)
       return nullptr;
 
@@ -590,7 +569,6 @@ public:
 
   T* insert(size_t position, const std::initializer_list<T> list) {
     size_t count = list.size();
-    maybe_grow(count);
 
     if(!count || _used + count > buffer_size || position > _used || position == buffer_size)
       return nullptr;
@@ -619,8 +597,6 @@ public:
 
   template <typename... Args>
   T* insert_new(size_t position, Args&&... args) {
-    maybe_grow(1);
-
     if(_used == buffer_size || position > _used || position == buffer_size)
       return nullptr;
 
@@ -640,8 +616,6 @@ public:
 
   template <typename U>
   T* push(U &&item) {
-    maybe_grow(1);
-
     if(_used == buffer_size) return nullptr;
 
     if(std::is_trivially_copyable<T>::value) {
@@ -657,8 +631,6 @@ public:
 
   template <typename... Args>
   T* push_new(Args&&... args) {
-    maybe_grow(1);
-
     if(_used == buffer_size) return nullptr;
 
     new (buffer + _used) T(std::forward<Args>(args)...);
@@ -776,7 +748,7 @@ protected:
     this->_used = 0;
   }
 
-  inline void _maybe_grow(const size_t &count) override {
+  void maybe_grow(const size_t &count) {
     if(!this->buffer_size) {
       this->init(count);
 
@@ -794,8 +766,6 @@ protected:
   }
 
 public:
-  using ivector<T>::operator=;
-
   vector(const size_t size = 0) : ivector<T>(), _arena(nullptr) {
     init(size);
   }
@@ -893,7 +863,95 @@ public:
       free(this->buffer);
   }
 
-  vector& operator=(const vector& other) = default;
+  vector& operator=(const vector& other) {
+    maybe_grow(other.used());
+    ivector<T>::operator=(other);
+
+    return *this;
+  }
+
+  vector& operator=(const std::initializer_list<T> list) {
+    maybe_grow(list.size());
+    ivector<T>::operator=(list);
+
+    return *this;
+  }
+
+  vector& operator=(const std::initializer_list<T>* list) {
+    maybe_grow(list->size());
+    ivector<T>::operator=(list);
+
+    return *this;
+  }
+
+  vector& operator=(const ivector<T>& other) {
+    maybe_grow(other.used());
+    ivector<T>::operator=(other);
+
+    return *this;
+  }
+
+  #ifndef SARRAY_STD_VECTORS_DISABLE
+  vector& operator=(const std::vector<T>& other) {
+    maybe_grow(other.size());
+    ivector<T>::operator=(other);
+
+    return *this;
+  }
+  #endif
+
+  template <typename U>
+  T* insert(size_t position, const size_t count, U &&item) {
+    maybe_grow(count);
+    return ivector<T>::insert(position, count, item);
+  }
+
+  template <typename U>
+  T* insert(size_t position, U &&item) {
+    return insert(position, 1, item);
+  }
+
+  template <typename U>
+  T* insert(vector::iterator pos, const size_t count, U &&item) {
+    return insert(&*pos - this->buffer, count, item);
+  }
+
+  template <typename U>
+  T* insert(vector::iterator pos, U &&item) {
+    return insert(pos, 1, item);
+  }
+
+  T* insert(size_t position, const std::initializer_list<T> list) {
+    maybe_grow(list.size());
+    return ivector<T>::insert(position, list);
+  }
+
+  T* insert(vector::iterator pos, const std::initializer_list<T> list) {
+    return insert(&*pos - this->buffer, list);
+  }
+
+  template <typename... Args>
+  T* insert_new(size_t position, Args&&... args) {
+    maybe_grow(1);
+    return ivector<T>::insert_new(position, std::forward<Args>(args)...);
+  }
+
+  template <typename... Args>
+  T* insert_new(vector::iterator pos, Args&&... args) {
+    return insert_new(&*pos - this->buffer, args...);
+  }
+
+  template <typename U>
+  T* push(U &&item) {
+    maybe_grow(1);
+    return ivector<T>::push(item);
+  }
+
+  template <typename... Args>
+  T* push_new(Args&&... args) {
+    maybe_grow(1);
+    return ivector<T>::push_new(std::forward<Args>(args)...);
+  }
 
   void init(const size_t size) {
     if(!size || _arena || this->buffer_size) return;

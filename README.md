@@ -160,26 +160,26 @@ __Smaller numbers is better!__
 
 ```
 Benchmarking 10000000 int allocations with a single cheap mass-dealloc/reset
-Arena                   alloc:   1.03 ns  dealloc:   0.00 ns
-Pool (Arena)            alloc:   4.87 ns  dealloc:   1.42 ns
-Pool (malloc)           alloc:   1.62 ns  dealloc:   0.82 ns
-apc::vector (reserve)         alloc:   2.28 ns  dealloc:   0.00 ns
-apc::vector (dynamic)         alloc:   2.34 ns  dealloc:   0.00 ns
-std::vector (reserve()) alloc:   0.49 ns  dealloc:   0.00 ns
-std::vector (dynamic)   alloc:   1.38 ns  dealloc:   0.00 ns
-std::list               alloc:  11.36 ns  dealloc:  11.74 ns
+Arena                   alloc:   0.72 ns  dealloc:   0.00 ns
+Pool (Arena)            alloc:   1.87 ns  dealloc:   0.70 ns
+Pool (malloc)           alloc:   1.61 ns  dealloc:   0.51 ns
+apc::vector (reserve)   alloc:   0.84 ns  dealloc:   0.00 ns
+apc::vector (dynamic)   alloc:   0.96 ns  dealloc:   0.00 ns
+std::vector (reserve()) alloc:   0.52 ns  dealloc:   0.00 ns
+std::vector (dynamic)   alloc:   1.42 ns  dealloc:   0.00 ns
+std::list               alloc:  10.84 ns  dealloc:  11.52 ns
 ```
 
 ```
 Benchmarking 100000 int allocations with individual expensive dealloc
 Arena                   (individual dealloc not supported)
-Pool (Arena)            alloc:   0.93 ns  dealloc:   0.39 ns
-Pool (malloc)           alloc:   0.64 ns  dealloc:   0.39 ns
-apc::vector (reserve)         alloc:   2.25 ns  dealloc: 3366.87 ns
-apc::vector (dynamic)         alloc:   2.74 ns  dealloc: 3374.91 ns
-std::vector (reserve()) alloc:   0.77 ns  dealloc: 3359.84 ns
-std::vector (dynamic)   alloc:   0.59 ns  dealloc: 3363.53 ns
-std::list               alloc:  10.01 ns  dealloc:  11.45 ns
+Pool (Arena)            alloc:   0.73 ns  dealloc:   0.45 ns
+Pool (malloc)           alloc:   0.68 ns  dealloc:   0.40 ns
+apc::vector (reserve)   alloc:   0.88 ns  dealloc: 3358.54 ns
+apc::vector (dynamic)   alloc:   1.22 ns  dealloc: 3354.82 ns
+std::vector (reserve()) alloc:   0.73 ns  dealloc: 3370.19 ns
+std::vector (dynamic)   alloc:   2.63 ns  dealloc: 3364.49 ns
+std::list               alloc:   9.63 ns  dealloc:  11.91 ns
 ```
 
 ### API Documentation
