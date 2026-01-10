@@ -237,4 +237,26 @@ int main() {
       s.find(apc::str("world")) == 6
     );
   }
+
+  // ------------------------------------------------------------------
+  // Shrink 
+  // ------------------------------------------------------------------
+  {
+    apc::str s = "Hello world!";
+    s.resize(100);
+
+    assert(
+      s.size() == 100 &&
+      s.used() == 13
+    );
+
+    s.shrink_to_fit(); // Will shrink to 32 which is the
+                       // default minimum size.
+
+    assert(
+      s.size() == 32 &&
+      s.used() == 13 &&
+      s == "Hello world!"
+    );
+  }
 }

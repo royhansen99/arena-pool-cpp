@@ -630,6 +630,16 @@ public:
     return copy;
   }
 
+  void shrink_to_fit() {
+    #ifdef ARENA_POOL_CPP
+    if(_arena) return;
+    #endif
+
+    if(_size <= 1 || _used == _size) return;
+
+    resize(_used);
+  }
+
   size_t size() const {
     return _size;
   }
