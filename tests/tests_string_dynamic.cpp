@@ -221,4 +221,20 @@ int main() {
       s6.replace(5, apc::str::npos, apc::str("123"))  == "Hello123" && s6.used() == 9
     );
   }
+
+  // ------------------------------------------------------------------
+  // Find 
+  // ------------------------------------------------------------------
+  {
+    apc::str s = "Hello world!";
+
+    assert(
+      s.find("H") == 0 &&
+      s.find("H", 1) == apc::str::npos &&
+      s.find("world") == 6 &&
+      s.find("l", 5) == 9 &&
+      s.find(apc::str8("world")) == 6 &&
+      s.find(apc::str("world")) == 6
+    );
+  }
 }

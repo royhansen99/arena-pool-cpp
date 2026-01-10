@@ -171,7 +171,21 @@ namespace apc {
   A& replace(const size_t pos, size_t len, const str_dynamic<S> &other) { \
     return replace(pos, len, other.c_str(), 0, npos); \
   } \
+  size_t find(const char* other, size_t pos = 0) { \
+    if(pos > _used - 1) return npos; \
+    char* search = strstr(&buffer[pos], other); \
+    return search ? search - buffer : npos; \
+  } \
   \
+  template <size_t s> \
+  size_t find(const str_fixed<s>& other, size_t pos = 0) { \
+    return find(other.c_str(), pos); \
+  } \
+  \
+  template <size_t S> \
+  size_t find(const str_dynamic<S>& other, size_t pos = 0) { \
+    return find(other.c_str(), pos); \
+  } \
   int compare(const char *other) const { \
     return strcmp(buffer, other); \
   } \
