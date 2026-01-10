@@ -31,9 +31,20 @@ namespace apc {
     \
     bool operator!=(const iterator& other) const { return is_equal(other); } \
     \
+    iterator& operator+(const size_t &num) { \
+      if(_reverse) it -= num; \
+      else it += num; \
+      \
+      return *this; \
+    } \
+    \
     iterator& operator++() { \
-      if(_reverse) it--; \
-      else it++; \
+      return operator+(1); \
+    } \
+    \
+    iterator& operator-(const size_t &num) { \
+      if(_reverse) it += num; \
+      else it -= num; \
       \
       return *this; \
     } \
@@ -47,11 +58,20 @@ namespace apc {
     return iterator(buffer[_used - 2], true); \
   } \
   \
-  const iterator end() { \
+  iterator end() { \
     return iterator(buffer[_used - 1]); \
   } \
   \
-  const iterator rend() { \
+  const iterator end() const { \
+    return iterator(buffer[_used - 1]); \
+  } \
+  \
+  iterator rend() { \
+    char* ptr = buffer; \
+    return iterator(*(ptr - 1)); \
+  } \
+  \
+  const iterator rend() const { \
     char* ptr = buffer; \
     return iterator(*(ptr - 1)); \
   }
@@ -80,7 +100,6 @@ namespace apc {
   A& insert(const size_t pos, const str_dynamic<S>& other, const size_t len = npos) { \
     return insert(pos, other.c_str(), 0, len); \
   } \
-  \
   A& append(const char *other, const size_t len = npos) { \
     return insert(_used ? _used - 1 : _used, other, len); \
   } \
@@ -93,6 +112,33 @@ namespace apc {
   template <size_t S> \
   A& append(const str_dynamic<S>& other, const size_t len = npos) { \
     return append(other.c_str(), len); \
+  } \
+  \
+  A& erase(const size_t pos, size_t len = npos) { \
+    if(!len || !_used || pos > _used - 1) return *this; \
+    const size_t max = _used - 1 - pos; \
+    if(max < len) len = max; \
+    const size_t remaining = _used - 1 - (pos + len); \
+    if(remaining) { \
+      memmove(&buffer[pos], &buffer[pos + len], remaining); \
+      buffer[pos + remaining] = '\0'; \
+    } else { \
+      buffer[pos] = '\0'; \
+    } \
+    _used = remaining || pos ? _used - len : 0; \
+    return *this; \
+  } \
+  A& erase(const iterator &start, const iterator &end) { \
+    if(_used && &*start < &buffer[_used - 1]) {\
+      size_t pos = &*start - buffer; \
+      size_t pos_end = (&*end - buffer); \
+      erase(pos, pos_end - pos); \
+    } \
+    return *this; \
+  } \
+  \
+  A& erase(const iterator &start) { \
+    return erase(start, end()); \
   } \
   \
   int compare(const char *other) const { \

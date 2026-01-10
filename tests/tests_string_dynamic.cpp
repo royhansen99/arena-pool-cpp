@@ -156,4 +156,49 @@ int main() {
       str == "12345"
     );
   }
+
+  // ------------------------------------------------------------------
+  // Erase 
+  // (FYI: The null character `\0` is also counted in `used()`,
+  // unless the string is empty - in that case `used() == 0`) 
+  // ------------------------------------------------------------------
+  {
+    apc::str s = "Hello world!";
+
+    {
+      apc::str s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
+      s0 = s1 = s2 = s3 = s4 = s5 = s6 = s7 = s8 = s9 = s;
+
+      assert(
+        s.used() == 13 &&
+        s0.erase(0) == "" && s0.used() == 0 &&
+        s1.erase(5) == "Hello" && s1.used() == 6 &&
+        s2.erase(5, 1) == "Helloworld!" && s2.used() == 12 && 
+        s3.erase(5, 6) == "Hello!" && s3.used() == 7 && 
+        s4.erase(5, 7) == "Hello" && s4.used() == 6 && 
+        s5.erase(1) == "H" && s5.used() == 2 && 
+        s6.erase(11) == "Hello world" && s6.used() == 12 && 
+        s7.erase(12) == "Hello world!" && s7.used() == 13 && 
+        s8.erase(0, 12) == "" && s8.used() == 0 && 
+        s9.erase(0, 11) == "!" && s9.used() == 2
+      );
+    }
+
+    // Erase with iterators()
+    {
+      apc::str s0, s1, s2, s3, s4, s5, s6;
+      s0 = s1 = s2 = s3 = s4 = s5 = s6 = s;
+
+      assert(
+        s.used() == 13 &&
+        s0.erase(s0.begin(), s0.end()) == "" && s0.used() == 0 &&
+        s1.erase(s1.begin(), s1.begin() + 1) == "ello world!" && s1.used() == 12 && 
+        s2.erase(s2.begin(), s2.end() - 3) == "ld!" && s2.used() == 4 && 
+        s3.erase(s3.begin() + 1, s3.end() - 3) == "Hld!" && s3.used() == 5 && 
+        s4.erase(s4.begin()) == "" && s4.used() == 0 &&
+        s5.erase(s5.begin() + 1) == "H" && s5.used() == 2 &&
+        s6.erase(s6.end() - 7) == "Hello" && s6.used() == 6 
+      );
+    }
+  }
 }
