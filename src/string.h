@@ -186,6 +186,31 @@ namespace apc {
   size_t find(const str_dynamic<S>& other, size_t pos = 0) { \
     return find(other.c_str(), pos); \
   } \
+  size_t rfind(const char* other, size_t other_pos = 0) { \
+    const size_t length = strlen(other); \
+    if(!length || other_pos > length - 1 || length > _used - 1) return npos; \
+    size_t pos = _used - 1 - length; \
+    while(pos >= 0) { \
+      char* search = strstr(&buffer[pos], &other[other_pos]); \
+      if(search) return search - buffer; \
+      if(pos == 0) break; \
+      \
+      if(length > pos) pos = 0;\
+      else pos -= length; \
+    } \
+    return npos; \
+  } \
+  \
+  template <size_t S> \
+  size_t rfind(const str_fixed<S>& other, size_t other_pos = 0) { \
+    return rfind(other.c_str(), other_pos); \
+  } \
+  \
+  template <size_t S> \
+  size_t rfind(const str_dynamic<S>& other, size_t other_pos = 0) { \
+    return rfind(other.c_str(), other_pos); \
+  } \
+  \
   int compare(const char *other) const { \
     return strcmp(buffer, other); \
   } \

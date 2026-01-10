@@ -234,7 +234,13 @@ int main() {
       s.find("world") == 6 &&
       s.find("l", 5) == 9 &&
       s.find(apc::str8("world")) == 6 &&
-      s.find(apc::str("world")) == 6
+      s.find(apc::str("world")) == 6 &&
+      s.rfind("l") == 9 &&
+      s.rfind("o") == 7 && 
+      s.rfind("123world", 3) == 6 && 
+      s.rfind("Hello") == 0 && 
+      s.rfind(apc::str("Hello")) == 0 && 
+      s.rfind(apc::str16("Hello")) == 0 
     );
   }
 
