@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.1.8
+ * Version: 0.1.9
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
