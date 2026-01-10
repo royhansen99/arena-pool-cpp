@@ -141,6 +141,37 @@ namespace apc {
     return erase(start, end()); \
   } \
   \
+  A& replace(const size_t pos, size_t len, const char* s, const size_t subpos, const size_t sublen = npos) { \
+    if(pos >= _used - 1) return *this; \
+    erase(pos, len); \
+    insert(pos, s, subpos, sublen); \
+    return *this; \
+  } \
+  \
+  A& replace(const size_t pos, size_t len, const char* s) { \
+    return replace(pos, len, s, 0, npos); \
+  } \
+  \
+  template <size_t S> \
+  A& replace(const size_t pos, size_t len, const str_fixed<S> &other, const size_t subpos, const size_t sublen = npos) { \
+    return replace(pos, len, other.c_str(), subpos, sublen); \
+  } \
+  \
+  template <size_t S> \
+  A& replace(const size_t pos, size_t len, const str_fixed<S> &other) { \
+    return replace(pos, len, other.c_str(), 0, npos); \
+  } \
+  \
+  template <size_t S> \
+  A& replace(const size_t pos, size_t len, const str_dynamic<S> &other, const size_t subpos, const size_t sublen = npos) { \
+    return replace(pos, len, other.c_str(), subpos, sublen); \
+  } \
+  \
+  template <size_t S> \
+  A& replace(const size_t pos, size_t len, const str_dynamic<S> &other) { \
+    return replace(pos, len, other.c_str(), 0, npos); \
+  } \
+  \
   int compare(const char *other) const { \
     return strcmp(buffer, other); \
   } \

@@ -201,4 +201,24 @@ int main() {
       );
     }
   }
+
+  // ------------------------------------------------------------------
+  // Replace
+  // ------------------------------------------------------------------
+  {
+    apc::str s = "Hello AAworld!BB";
+
+    apc::str s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
+    s0 = s1 = s2 = s3 = s4 = s5 = s6 = s7 = s8 = s9 = s;
+
+    assert(
+      s0.replace(14, 2, "XXX", 0) == "Hello AAworld!XXX" && s0.used() == 18 &&
+      s1.replace(6, 1, "XXX", 0) == "Hello XXXAworld!BB" && s1.used() == 19 && 
+      s2.replace(5, apc::str::npos, "XXX", 0) == "HelloXXX" && s2.used() == 9 && 
+      s3.replace(5, apc::str::npos, "123", 1, 1) == "Hello2" && s3.used() == 7 && 
+      s4.replace(5, apc::str::npos, "123") == "Hello123" && s4.used() == 9 &&
+      s5.replace(5, apc::str::npos, apc::str32("123"))  == "Hello123" && s5.used() == 9 &&
+      s6.replace(5, apc::str::npos, apc::str("123"))  == "Hello123" && s6.used() == 9
+    );
+  }
 }
