@@ -1,6 +1,7 @@
 // Compile: g++ -std=c++11 -Wall -fsanitize=address arena_example.cpp
 
 #include "../src/arena.h"
+#include "../src/vector.h"
 #include <iostream>
 
 struct Foo {

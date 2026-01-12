@@ -1,6 +1,7 @@
 // COMPILE: g++ -std=c++11 -O3 -march=native benchmarks_alloc.cpp 
 
 #include "../src/arena.h"
+#include "../src/vector.h"
 #include <vector>
 #include <chrono>
 #include <iostream>

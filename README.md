@@ -40,7 +40,8 @@ Simply drop the single header `Arena.h` file directly in to your project.
 
 ```cpp
 /* (From ./example.cpp in this repo) */
-#include "./arena.h"
+#include "../src/arena.h"
+#include "../src/vector.h"
 #include <iostream>
 
 struct Foo {
