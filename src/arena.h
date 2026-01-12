@@ -23,28 +23,33 @@
 
 namespace apc {
 
+struct arena_page {
+  size_t size;
+  size_t used;
+  void* target; 
+  char* buffer;
+};
+
 class arena {
 private:
-  arena* parent;
-  char* buffer;
-  size_t total_size;
-  size_t offset;
+  arena* parent = nullptr;
+  arena_page* pages = nullptr;
+  size_t pages_size = 0;
 
 public:
-  arena(const size_t size) :
-    parent(nullptr),
-    buffer(static_cast<char*>(malloc(size))),
-    total_size(size),
-    offset(0) {}
+  arena(const size_t size) {
+    if(size) grow(size);
+  }
 
-  arena(arena &parent, const size_t size) :
-    parent(&parent),
-    buffer(static_cast<char*>(parent.allocate_raw(size))),
-    total_size(size),
-    offset(0) {}
+  arena(arena &parent, const size_t size) : parent(&parent) {
+    if(size) grow(size);
+  }
 
   ~arena() {
-    if(!parent) free(buffer);
+    if(!parent) {
+      for(size_t i = 0; i < pages_size; i++)
+        free(pages[i].target);
+    }
   }
 
   template <typename T, typename... Args>
@@ -58,8 +63,6 @@ public:
 
   template <typename T>
   T* allocate_size(const size_t count = 1) {
-    if(!buffer) return nullptr;
-
     size_t alignment = alignof(T);
     size_t size = sizeof(T) * count;
 
@@ -83,49 +86,97 @@ public:
   void* allocate_raw(const size_t size,
     const size_t alignment = alignof(std::max_align_t)
   ) {
-    uintptr_t current_addr = reinterpret_cast<uintptr_t>(buffer) + offset;
-    size_t padding = (alignment - (current_addr % alignment)) % alignment;
+    for(size_t i = 0; i <= pages_size; i++) {
+      arena_page *page;
+      char* buffer;
 
-    size_t new_size = padding + size;
+      if(i == pages_size) {
+        const size_t grow_size = i == 0 ? size + alignment :
+          pages[i - 1].size * 2;
 
-    if (offset + new_size > total_size) {
-      return nullptr;
+        if(!grow(grow_size)) break; 
+      }
+
+      page = &pages[i];
+      buffer = page->buffer + page->used;
+
+      if(page->size - page->used < size) continue; 
+
+      uintptr_t current_addr = reinterpret_cast<uintptr_t>(buffer);
+      size_t padding = (alignment - (current_addr % alignment)) % alignment;
+      size_t new_size = padding + size;
+
+      if(page->size - page->used < new_size) continue;
+
+      char* new_allocation = buffer + padding;
+      page->used += new_size;
+
+      return static_cast<void*>(new_allocation);
     }
 
-    char* new_allocation = buffer + offset + padding;
-    offset += new_size;
-
-    return static_cast<void*>(new_allocation);
+    return nullptr;
   }
 
   bool resize(const size_t size) {
-    char* new_buffer = static_cast<char*>(
-        parent ? parent->allocate_raw(size) :
-        malloc(size)
-    );
+    if(!parent) {
+      for(size_t i = 0; i < pages_size; i++)
+        free(pages[i].target);
+    }
 
-    if(!new_buffer) return false;
+    pages = nullptr;
+    pages_size = 0;
 
-    if(!parent) free(buffer);
+    return grow(size);
+  }
 
-    reset();
+  bool grow(const size_t size) {
+    const size_t new_size = (sizeof(arena_page) * (pages_size + 1)) + size;
+    char* new_page;
+    
+    if(!parent)
+      new_page = static_cast<char*>(malloc(new_size)); 
+    else
+      new_page = static_cast<char*>(parent->allocate_raw(new_size));
 
-    buffer = new_buffer;
-    total_size = size;
+    if(!new_page) return false;
+
+    if(pages_size)
+      memcpy(new_page, pages, sizeof(arena_page) * pages_size);
+
+    reinterpret_cast<arena_page*>(new_page)[pages_size] = {
+      size, // size
+      0, // used
+      new_page, // target
+      new_page + (sizeof(arena_page) * (pages_size + 1)), // buffer
+    }; 
+
+    pages = reinterpret_cast<arena_page*>(new_page);
+    pages_size++;
 
     return true;
   }
 
   void reset() {
-    offset = 0;
+    for(size_t i = 0; i < pages_size; i++)
+      pages[i].used = 0;
   }
 
   size_t size() const {
-    return total_size;
+    size_t count = 0;
+
+    for(size_t i = 0; i < pages_size; i++)
+      count += pages[i].size;
+
+    return count;
   }
 
   size_t used() const {
-    return offset;
+    size_t count = 0;
+
+    for(size_t i = 0; i < pages_size; i++)
+      count += pages[i].used;
+
+    return count;
   }
 };
 

@@ -15,17 +15,18 @@ int main() {
     {
       size_t three_ints = sizeof(int) * 3;
       apc::arena arena(three_ints);
-      assert(arena.size() == three_ints);
-      assert(arena.used() == 0);
+
+      assert(
+        arena.size() == three_ints &&
+        arena.used() == 0
+      );
 
       int* a = arena.allocate_new<int>(111);
       int* b = arena.allocate_new<int>(222);
       int* c = arena.allocate_new<int>(333);
+
       assert(a && b && c);
       assert(*a == 111 && *b == 222 && *c == 333);
-      assert(arena.used() == three_ints);
-
-      assert(arena.allocate_new<int>(50) == nullptr);  // overflow -> nullptr
       assert(arena.used() == three_ints);
 
       arena.resize(500); // Resize and clear arena.
@@ -92,7 +93,7 @@ int main() {
       child_arena.size() == 256 &&
       child_arena.used() == 0 &&
       arena.size() == 512 &&
-      arena.used() == 256
+      arena.used() > 256
     );
 
     int* num = child_arena.allocate_new<int>(100);
@@ -109,15 +110,15 @@ int main() {
     // new buffer with the new size.
     assert(
       child_arena.size() == 100 &&
-      arena.used() == (256 + 100)
+      arena.used() > (256 + 100)
     );
 
     // Resizing should fail because the parent does not
     // have enough space.
     assert(
-      child_arena.resize(300) == false &&
-      child_arena.size() == 100 &&
-      arena.used() == (256 + 100)
+      child_arena.resize(300) &&
+      child_arena.size() == 300 &&
+      arena.used() > (256 + 100 + 300)
     );
   }
 
@@ -147,11 +148,42 @@ int main() {
         child_arena.used() == (
           (sizeof(char) * 40) + (sizeof(int) * 10) 
         ) && 
-        arena.used() == 128 &&
+        arena.used() > 128 &&
         arena.size() == 256 
       );
 
       child_arena.reset();
     }
+  }
+
+  // ------------------------------------------------------------------
+  // Grow automatically (x2) 
+  // ------------------------------------------------------------------
+  {
+    apc::arena arena(0);
+
+    assert(arena.size() == 0);
+
+    arena.grow(10);
+
+    assert(arena.size() == 10);
+
+    int* num = arena.allocate_size<int>(3);
+    num[0] = 200;
+    num[1] = 300;
+    num[2] = 400;
+
+    assert(
+      num[0] == 200 &&
+      num[1] == 300 &&
+      num[2] == 400 &&
+      arena.size() > 10 + (sizeof(int) * 3)
+    );
+
+    arena.allocate_size<int>(3);
+
+    assert(
+      arena.size() > (10 + (sizeof(int) * 3) * 2)
+    );
   }
 }
