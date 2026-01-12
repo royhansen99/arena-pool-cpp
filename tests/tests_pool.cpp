@@ -1,4 +1,4 @@
-// COMPILE: g++ -std=c++11 -Wall -fsanitize=address tests_pool.cpp
+// COMPILE: g++ -std=c++11 -Wall -fsanitize=address tests/tests_pool.cpp
 
 #include "../src/arena.h"
 #include <cassert>
@@ -22,9 +22,6 @@ int main() {
     int* c = pool.allocate_new(333);
     assert(a && b && c);
     assert(*a == 111 && *b == 222 && *c == 333);
-    assert(pool.used() == 3);
-
-    assert(pool.allocate(444) == nullptr);  // overflow -> nullptr
     assert(pool.used() == 3);
   }
 
@@ -58,7 +55,6 @@ int main() {
     int* r = pool.allocate_new(100);
     assert(q && r);
     assert(pool.used() == 3);
-    assert(pool.allocate(50) == nullptr); // overflow -> nullptr
 
     pool.deallocate(q);
     pool.deallocate(r);
@@ -74,8 +70,7 @@ int main() {
     assert(
       pool.allocate_new(9) && // ok
       pool.allocate_new(6) && // ok
-      pool.allocate_new(4) && // ok
-      !pool.allocate_new(4) // overflow -> nullptr
+      pool.allocate_new(4) // ok
     );
   }
 
@@ -201,6 +196,30 @@ int main() {
     assert(
       john->name == "John" &&
       john->age == 20
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Grow automatically
+  // ------------------------------------------------------------------
+  {
+    apc::pool<int> pool(3);
+
+    pool.allocate(1);
+    pool.allocate(2);
+    pool.allocate(3);
+
+    assert(
+      pool.size() == 3 &&
+      pool.used() == 3 
+    );
+
+    // Will grow by + (current_size * 2)
+    pool.allocate(4);
+
+    assert(
+      pool.size() == 9 &&
+      pool.used() == 4 
     );
   }
 }

@@ -189,7 +189,7 @@ struct pool_item {
 
 
 template <typename T>
-struct pool_buffer {
+struct pool_page {
   pool_item<T>* buffer;
   size_t size;
 };
@@ -198,14 +198,16 @@ template <typename T>
 class pool {
 private:
   arena* arena;
-  pool_buffer<T>* buffers;
-  size_t buffers_size;
+  pool_page<T>* pages;
+  size_t pages_size;
   pool_item<T>* free_ptr;
   pool_item<T>* use_ptr;
   size_t _used;
 
   T* allocate_raw() {
-    if(!free_ptr) return nullptr;
+    if(!free_ptr) {
+      if(!grow(size() * 2)) return nullptr;
+    }
 
     pool_item<T>* chunk = free_ptr;
     free_ptr = free_ptr->next;
@@ -223,25 +225,25 @@ private:
 public:
   pool(apc::arena &_arena, const size_t pool_size) :
     arena(&_arena),
-    buffers(arena->allocate_size<pool_buffer<T>>()),
-    buffers_size(1),
+    pages(arena->allocate_size<pool_page<T>>()),
+    pages_size(1),
     free_ptr(nullptr),
     use_ptr(nullptr),
     _used(0)
   {
-    buffers[0] = { arena->allocate_size<pool_item<T>>(pool_size), pool_size };
+    pages[0] = { arena->allocate_size<pool_item<T>>(pool_size), pool_size };
     reset();
   }
 
   pool(const size_t pool_size) :
     arena(nullptr),
-    buffers(static_cast<pool_buffer<T>*>(malloc(sizeof(pool_buffer<T>)))),
-    buffers_size(1),
+    pages(static_cast<pool_page<T>*>(malloc(sizeof(pool_page<T>)))),
+    pages_size(1),
     free_ptr(nullptr),
     use_ptr(nullptr),
     _used(0)
   {
-    buffers[0] = {
+    pages[0] = {
       static_cast<pool_item<T>*>(malloc(sizeof(pool_item<T>) * pool_size)),
       pool_size
     };
@@ -258,11 +260,11 @@ public:
     }
 
     if(!arena) {
-      for(size_t i = 0; i < buffers_size; i++) {
-        free(buffers[i].buffer);
+      for(size_t i = 0; i < pages_size; i++) {
+        free(pages[i].buffer);
       }
 
-      free(buffers);
+      free(pages);
     }
   }
 
@@ -275,18 +277,18 @@ public:
     }
 
     pool_item<T>* previous = nullptr;
-    for(size_t i = 0; i < buffers_size; i++) {
-      for(size_t z = 0; z < buffers[i].size; z++) {
-        if(previous) previous->next = &(buffers[i].buffer[z]);
+    for(size_t i = 0; i < pages_size; i++) {
+      for(size_t z = 0; z < pages[i].size; z++) {
+        if(previous) previous->next = &(pages[i].buffer[z]);
 
-        previous = &(buffers[i].buffer[z]);
+        previous = &(pages[i].buffer[z]);
         previous->prev = nullptr;
         previous->next = nullptr;
       }
     }
 
     previous->next = nullptr;
-    free_ptr = &(buffers[0].buffer[0]);
+    free_ptr = &(pages[0].buffer[0]);
 
     _used = 0;
   }
@@ -342,7 +344,7 @@ public:
 
   bool grow(const size_t size) {
     pool_item<T>* new_buffer = nullptr;
-    size_t new_count = buffers_size + 1;
+    size_t new_count = pages_size + 1;
 
     if(arena)
       new_buffer = arena->allocate_size<pool_item<T>>(size);
@@ -351,12 +353,12 @@ public:
 
     if(!new_buffer) return false;
 
-    pool_buffer<T>* new_list = nullptr;
+    pool_page<T>* new_list = nullptr;
 
     if(arena)
-      new_list = arena->allocate_size<pool_buffer<T>>(new_count);
+      new_list = arena->allocate_size<pool_page<T>>(new_count);
     else
-      new_list = static_cast<pool_buffer<T>*>(realloc(buffers, sizeof(pool_buffer<T>) * new_count));
+      new_list = static_cast<pool_page<T>*>(realloc(pages, sizeof(pool_page<T>) * new_count));
 
     if(!new_list) {
       free(new_buffer);
@@ -364,14 +366,14 @@ public:
     }
 
     if(arena) {
-      for(size_t i = 0; i < buffers_size; i++) {
-        new_list[i] = buffers[i];
+      for(size_t i = 0; i < pages_size; i++) {
+        new_list[i] = pages[i];
       }
     }
 
     new_list[new_count - 1] = { new_buffer, size };
-    buffers = new_list;
-    buffers_size = new_count;
+    pages = new_list;
+    pages_size = new_count;
 
     for(size_t i = 1; i < size; i++) {
       new_buffer[i - 1].next = &(new_buffer[i]);
@@ -386,8 +388,8 @@ public:
   size_t size() const {
     size_t total_size = 0;
 
-    for(size_t i = 0; i < buffers_size; i++) {
-      total_size += buffers[i].size;
+    for(size_t i = 0; i < pages_size; i++) {
+      total_size += pages[i].size;
     }
 
     return total_size;
