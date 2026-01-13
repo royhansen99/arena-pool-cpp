@@ -40,7 +40,7 @@ int main() {
       printf(benchmark.description, N);
 
       // --------------------------------------------------------------
-      // Arena
+      // apc::arena 
       // --------------------------------------------------------------
       if(single_free) { // Only run this benchmark for single frees
         apc::arena arena(1024ULL * 1024 * 1024);  // 1 GiB
@@ -57,39 +57,14 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "Arena                   alloc: " << std::setw(6) << alloc_ns
+        std::cout << "apc::arena              alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
         } else {
-        std::cout << "Arena                   (individual dealloc not supported)\n";
+        std::cout << "apc::arena              (individual dealloc not supported)\n";
       }
 
       // --------------------------------------------------------------
-      // Pool (Arena)
-      // --------------------------------------------------------------
-      {
-        apc::arena arena(1024ULL * 1024 * 1024);  // 1 GiB
-        apc::pool<int> pool(arena, CAP);
-
-        auto t0 = Clock::now();
-        for (size_t i = 0; i < N; ++i) {
-          int* p = pool.allocate_new(static_cast<int>(i));
-        }
-        auto t1 = Clock::now();
-        double alloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
-
-        t0 = Clock::now();
-        pool.reset(); // This is essentially individual frees, since
-                      // the pool must cycle through every item in
-                      // the pool.
-        t1 = Clock::now();
-        double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
-
-        std::cout << "Pool (Arena)            alloc: " << std::setw(6) << alloc_ns
-                  << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
-      }
-
-      // --------------------------------------------------------------
-      // Pool (malloc)
+      // apc::pool (reserve)
       // --------------------------------------------------------------
       {
         apc::pool<int> pool(CAP);
@@ -108,7 +83,31 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "Pool (malloc)           alloc: " << std::setw(6) << alloc_ns
+        std::cout << "apc::pool (reserve)     alloc: " << std::setw(6) << alloc_ns
+                  << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
+      }
+
+      // --------------------------------------------------------------
+      // apc::pool (dynamic)
+      // --------------------------------------------------------------
+      {
+        apc::pool<int> pool(1);
+
+        auto t0 = Clock::now();
+        for (size_t i = 0; i < N; ++i) {
+          int* p = pool.allocate_new(static_cast<int>(i));
+        }
+        auto t1 = Clock::now();
+        double alloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
+
+        t0 = Clock::now();
+        pool.reset(); // This is essentially individual frees, since
+                      // the pool must cycle through every item in
+                      // the pool.
+        t1 = Clock::now();
+        double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
+
+        std::cout << "apc::pool (dynamic)     alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       }
 
@@ -190,7 +189,7 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "std::vector (reserve()) alloc: " << std::setw(6) << alloc_ns
+        std::cout << "std::vector (reserve)   alloc: " << std::setw(6) << alloc_ns
                   << " ns  dealloc: " << std::setw(6) << dealloc_ns << " ns\n";
       }
 
