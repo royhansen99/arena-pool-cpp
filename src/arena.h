@@ -197,16 +197,16 @@ struct pool_page {
 template <typename T>
 class pool {
 private:
-  arena* arena;
-  pool_page<T>* pages;
-  size_t pages_size;
-  pool_item<T>* free_ptr;
-  pool_item<T>* use_ptr;
-  size_t _used;
+  arena* arena = nullptr;
+  pool_page<T>* pages = nullptr;
+  size_t pages_size = 0;
+  pool_item<T>* free_ptr = nullptr;
+  pool_item<T>* use_ptr = nullptr;
+  size_t _used = 0;
 
   T* allocate_raw() {
     if(!free_ptr) {
-      if(!grow(size() * 2)) return nullptr;
+      if(!grow(size() ? size() * 2 : 1)) return nullptr;
     }
 
     pool_item<T>* chunk = free_ptr;
@@ -223,32 +223,12 @@ private:
   }
 
 public:
-  pool(apc::arena &_arena, const size_t pool_size) :
-    arena(&_arena),
-    pages(arena->allocate_size<pool_page<T>>()),
-    pages_size(1),
-    free_ptr(nullptr),
-    use_ptr(nullptr),
-    _used(0)
-  {
-    pages[0] = { arena->allocate_size<pool_item<T>>(pool_size), pool_size };
-    reset();
+  pool(apc::arena &_arena, const size_t pool_size = 0) : arena(&_arena) {
+    if(pool_size) grow(pool_size);
   }
 
-  pool(const size_t pool_size) :
-    arena(nullptr),
-    pages(static_cast<pool_page<T>*>(malloc(sizeof(pool_page<T>)))),
-    pages_size(1),
-    free_ptr(nullptr),
-    use_ptr(nullptr),
-    _used(0)
-  {
-    pages[0] = {
-      static_cast<pool_item<T>*>(malloc(sizeof(pool_item<T>) * pool_size)),
-      pool_size
-    };
-
-    reset();
+  pool(const size_t pool_size = 0) {
+    if(pool_size) grow(pool_size);
   }
 
   ~pool() {
@@ -269,6 +249,8 @@ public:
   }
 
   void reset() {
+    if(!pages_size) return;
+
     if(!std::is_trivially_destructible<T>::value) {
       while(use_ptr) {
         use_ptr->value.~T();
@@ -357,19 +339,19 @@ public:
 
     if(arena)
       new_list = arena->allocate_size<pool_page<T>>(new_count);
-    else
+    else if(pages_size)
       new_list = static_cast<pool_page<T>*>(realloc(pages, sizeof(pool_page<T>) * new_count));
+    else
+      new_list = static_cast<pool_page<T>*>(malloc(sizeof(pool_page<T>) * new_count));
 
     if(!new_list) {
-      free(new_buffer);
+      if(!arena) free(new_buffer);
+
       return false;
     }
 
-    if(arena) {
-      for(size_t i = 0; i < pages_size; i++) {
-        new_list[i] = pages[i];
-      }
-    }
+    if(arena && pages_size)
+      memcpy(new_list, pages, sizeof(pool_page<T>) * pages_size);
 
     new_list[new_count - 1] = { new_buffer, size };
     pages = new_list;

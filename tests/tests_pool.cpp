@@ -22,7 +22,7 @@ int main() {
     int* c = pool.allocate_new(333);
     assert(a && b && c);
     assert(*a == 111 && *b == 222 && *c == 333);
-    assert(pool.used() == 3);
+    assert(pool.used() == 3 && pool.size() == 3);
   }
 
   // ------------------------------------------------------------------
@@ -203,7 +203,7 @@ int main() {
   // Grow automatically
   // ------------------------------------------------------------------
   {
-    apc::pool<int> pool(3);
+    apc::pool<int> pool;
 
     pool.allocate(1);
     pool.allocate(2);
