@@ -171,6 +171,54 @@ namespace apc {
   A& replace(const size_t pos, size_t len, const str_dynamic<S> &other) { \
     return replace(pos, len, other.c_str(), 0, npos); \
   } \
+  \
+  A& trim() { \
+    if(!_used) return *this; \
+    \
+    size_t \
+      size = _used - 1, \
+      remaining = size, \
+      trim_begin = 0, \
+      trim_end = 0; \
+    \
+    for(size_t i = 0; i < size; i++) { \
+      if(buffer[i] == '\n' || buffer[i] == '\r' || buffer[i] == ' ' || buffer[i] == '\t') trim_begin++; \
+      else break; \
+    } \
+    \
+    remaining -= trim_begin; \
+    \
+    if(!remaining) { \
+      buffer[0] = '\0'; \
+      _used = 0; \
+      return *this; \
+    } \
+    \
+    for(size_t i = size - 1; i >= 0; i--) { \
+      if(buffer[i] == '\n' || buffer[i] == '\r' || buffer[i] == ' ' || buffer[i] == '\t') trim_end++; \
+      else break; \
+    } \
+    \
+    remaining -= trim_end; \
+    \
+    if(!remaining) { \
+      buffer[0] = '\0'; \
+      _used = 0; \
+      return *this; \
+    } \
+    \
+    if(trim_begin) { \
+      memmove(buffer, &buffer[trim_begin], size - trim_begin); \
+      buffer[size - trim_begin] = '\0'; \
+    } \
+    \
+    if(trim_end) buffer[size - trim_begin - trim_end] = '\0'; \
+    \
+    _used = remaining + 1; \
+    \
+    return *this; \
+  } \
+  \
   size_t find(const char* other, size_t pos = 0) { \
     if(pos > _used - 1) return npos; \
     char* search = strstr(&buffer[pos], other); \

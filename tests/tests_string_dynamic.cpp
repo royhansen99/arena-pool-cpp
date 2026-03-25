@@ -265,4 +265,31 @@ int main() {
       s == "Hello world!"
     );
   }
+
+  // ------------------------------------------------------------------
+  // Trim 
+  // ------------------------------------------------------------------
+  {
+    {
+      apc::str s = "\r\n\t    Hello world!!!   \r\n   ";
+
+      assert(s.used() == 30); 
+
+      s.trim();
+
+      assert(s.used() == 15); 
+      assert(s == "Hello world!!!");
+    }
+
+    {
+      apc::str s = "   \r\n\t    \r\n";
+
+      assert(s.used() == 13);
+
+      s.trim();
+
+      assert(s.used() == 0);
+      assert(s == "");
+    }
+  }
 }
