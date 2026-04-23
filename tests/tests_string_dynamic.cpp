@@ -71,29 +71,52 @@ int main() {
   // Dynamically grow beyond the static size 
   // ------------------------------------------------------------------
   {
-    apc::str str = "1234";
+    {
+      apc::str str = "1234";
 
-    assert(
-      str == "1234" &&
-      str.size() == 32 &&
-      str.used() == 4 
-    );
+      assert(
+        str == "1234" &&
+        str.size() == 32 &&
+        str.used() == 4 
+      );
 
-    for(int i = 0; i < 3; i++) {
-      str += "[a sentence...]"; // 15 chars
+      for(int i = 0; i < 3; i++) {
+        str += "[a sentence...]"; // 15 chars
+      }
+
+      assert(
+        str.size() == 32 * 2 && // size doubled
+        str.used() == 49 // 4 + 15 + 15 + 15
+      );
+
+      str += str;
+
+      assert(
+        str.size() == 32 * 4 && // size doubled
+        str.used() == 98 // ((4 + 15 + 15 + 15) * 2)
+      );
     }
 
-    assert(
-      str.size() == 32 * 2 && // size doubled
-      str.used() == 49 // 4 + 15 + 15 + 15
-    );
+    {
+      apc::str_dynamic<11> str = "Hello world";
 
-    str += str;
+      // Fits exactly, so size remains the initial 11 chars.
+      assert(
+        str == "Hello world" &&
+        str.used() == 11 &&
+        str.size() == 11
+      );
 
-    assert(
-      str.size() == 32 * 4 && // size doubled
-      str.used() == 98 // ((4 + 15 + 15 + 15) * 2)
-    );
+      str = "Hello world!";
+
+      // Exceeds initial size by 1 chars, so size is doubled from
+      // the initial.
+      assert(
+        str == "Hello world!" &&
+        str.used() == 12 &&
+        str.size() == 22 
+      );
+    }
   }
 
   // ------------------------------------------------------------------
