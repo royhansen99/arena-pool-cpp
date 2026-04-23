@@ -17,6 +17,19 @@
 
 namespace apc {
 
+// Yes, the two macros used in this file are not pretty, no doubt about that.
+//
+// Using a base class with virtual methods would be much nicer, however there
+// is too much overhead with virtual lookups.
+// That is the reason for using macros with zero overhead.
+//
+// There is also another alternative of changing the str_fixed class to use a
+// ptr to the static buffer, and then inheriting it into str_dynamic.
+// This way all macro methods could be moved into the str_fixed class.
+// It's not a terrible alternative, with the slight memory overhead of having an extra
+// ptr allocated on every use of the str_fixed class.
+//
+// Im keeping the macros for now.
 #define STRING_COMMON_ITERATOR(A) \
   class iterator { \
     char* it; \
