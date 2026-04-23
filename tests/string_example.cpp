@@ -14,7 +14,7 @@ int main() {
 
   std::cout << str << "\n"; // "Hello world!Hello world!"
 
-  // "Used: 25 / 32"
+  // "Used: 24 / 32"
   std::cout << "Used: " << str.used() << " / " << str.size() << "\n";
 
   // Will go beyond the fixed 32-char size,
@@ -22,7 +22,7 @@ int main() {
   // fit.
   str += str;
 
-  std::cout << str << "\n"; // "Hello world!Hello world!Hello w""
+  std::cout << str << "\n"; // "Hello world!Hello world!Hello wo"
 
   // "Used: 32 / 32"
   std::cout << "Used: " << str.used() << " / " << str.size() << "\n";

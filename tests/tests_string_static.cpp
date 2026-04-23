@@ -23,7 +23,7 @@ int main() {
       str.at(4) == '!' &&
       strcmp(str.c_str(), "Test!") == 0 &&
       str.size() == 16 &&
-      str.used() == 6
+      str.used() == 5 
     );
 
     assert(
@@ -31,7 +31,7 @@ int main() {
       str2 != "Test" &&
       strcmp(str2.c_str(), "Test2!") == 0 &&
       str2.size() == 16 &&
-      str2.used() == 7 
+      str2.used() == 6 
     );
 
     assert(
@@ -60,14 +60,14 @@ int main() {
     assert(
       str == "1234" &&
       str.size() == 32 &&
-      str.used() == 5 
+      str.used() == 4 
     );
 
     str += str;
 
     assert(
       str == "12341234" &&
-      str.used() == 9 
+      str.used() == 8 
     );
 
     apc::str32 str2;
@@ -80,17 +80,17 @@ int main() {
   // Bounds checking 
   // ------------------------------------------------------------------
   {
-    apc::str16 str = "1234567891234567";
+    apc::str16 str = "12345678912345678";
 
     assert(
-      str == "123456789123456"
+      str == "1234567891234567"
     );
 
     // Won't be appended since string is already full.
     str += "way out of bound";
 
     assert(
-      str == "123456789123456" &&
+      str == "1234567891234567" &&
       str.size() == 16 &&
       str.used() == 16
     );
@@ -102,10 +102,10 @@ int main() {
     );
 
     // Last part truncated, since not enough space for everything.
-    str += "|67891234567";
+    str += "|678912345678";
 
     assert(
-      str == "12345|678912345" &&
+      str == "12345|6789123456" &&
       str.size() == 16 &&
       str.used() == 16
     );
@@ -122,7 +122,7 @@ int main() {
     }
 
     assert(
-      order == "12345|678912345"
+      order == "12345|6789123456"
     );
 
     apc::str16 reverse;
@@ -132,7 +132,7 @@ int main() {
     }
 
     assert(
-      reverse == "543219876|54321"
+      reverse == "6543219876|54321"
     );
   }
 

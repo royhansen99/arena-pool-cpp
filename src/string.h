@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.2.1
+ * Version: 0.2.2
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -55,15 +55,15 @@ namespace apc {
   } \
   \
   iterator rbegin() { \
-    return iterator(buffer[_used - 2], true); \
+    return iterator(buffer[_used - 1], true); \
   } \
   \
   iterator end() { \
-    return iterator(buffer[_used - 1]); \
+    return iterator(buffer[_used]); \
   } \
   \
   const iterator end() const { \
-    return iterator(buffer[_used - 1]); \
+    return iterator(buffer[_used]); \
   } \
   \
   iterator rend() { \
@@ -101,7 +101,7 @@ namespace apc {
     return insert(pos, other.c_str(), 0, len); \
   } \
   A& append(const char *other, const size_t len = npos) { \
-    return insert(_used ? _used - 1 : _used, other, len); \
+    return insert(_used, other, len); \
   } \
   \
   template <size_t S> \
@@ -115,10 +115,10 @@ namespace apc {
   } \
   \
   A& erase(const size_t pos, size_t len = npos) { \
-    if(!len || !_used || pos > _used - 1) return *this; \
-    const size_t max = _used - 1 - pos; \
+    if(!len || !_used || pos >= _used) return *this; \
+    const size_t max = _used - pos; \
     if(max < len) len = max; \
-    const size_t remaining = _used - 1 - (pos + len); \
+    const size_t remaining = _used - (pos + len); \
     if(remaining) { \
       memmove(&buffer[pos], &buffer[pos + len], remaining); \
       buffer[pos + remaining] = '\0'; \
@@ -129,7 +129,7 @@ namespace apc {
     return *this; \
   } \
   A& erase(const iterator &start, const iterator &end) { \
-    if(_used && &*start < &buffer[_used - 1]) {\
+    if(_used && &*start < &buffer[_used]) {\
       size_t pos = &*start - buffer; \
       size_t pos_end = (&*end - buffer); \
       erase(pos, pos_end - pos); \
@@ -142,7 +142,7 @@ namespace apc {
   } \
   \
   A& replace(const size_t pos, size_t len, const char* s, const size_t subpos, const size_t sublen = npos) { \
-    if(pos >= _used - 1) return *this; \
+    if(pos >= _used) return *this; \
     erase(pos, len); \
     insert(pos, s, subpos, sublen); \
     return *this; \
@@ -176,7 +176,7 @@ namespace apc {
     if(!_used) return *this; \
     \
     size_t \
-      size = _used - 1, \
+      size = _used, \
       remaining = size, \
       trim_begin = 0, \
       trim_end = 0; \
@@ -214,13 +214,13 @@ namespace apc {
     \
     if(trim_end) buffer[size - trim_begin - trim_end] = '\0'; \
     \
-    _used = remaining + 1; \
+    _used = remaining; \
     \
     return *this; \
   } \
   \
   size_t find(const char* other, size_t pos = 0) { \
-    if(pos > _used - 1) return npos; \
+    if(pos >= _used) return npos; \
     char* search = strstr(&buffer[pos], other); \
     return search ? search - buffer : npos; \
   } \
@@ -236,8 +236,8 @@ namespace apc {
   } \
   size_t rfind(const char* other, size_t other_pos = 0) { \
     const size_t length = strlen(other); \
-    if(!length || other_pos > length - 1 || length > _used - 1) return npos; \
-    size_t pos = _used - 1 - length; \
+    if(!length || other_pos > length - 1 || length >= _used) return npos; \
+    size_t pos = _used - length; \
     while(pos >= 0) { \
       char* search = strstr(&buffer[pos], &other[other_pos]); \
       if(search) return search - buffer; \
@@ -351,7 +351,7 @@ class str_dynamic;
 
 template <size_t N>
 class str_fixed {
-  char buffer[N];
+  char buffer[N + 1];
   size_t _used;
 
 public:
@@ -374,10 +374,10 @@ public:
   str_fixed(const str_dynamic<S>& other) : str_fixed(other.c_str()) { }
 
   str_fixed& operator=(const char *other) {
-    size_t len = strlen(other) + 1;
+    size_t len = strlen(other);
     if(len > N) len = N;
     memcpy(buffer, other, len < N ? len : N); 
-    buffer[len - 1] = '\0';
+    buffer[len] = '\0';
     _used = len;
 
     return *this;
@@ -385,9 +385,8 @@ public:
 
   str_fixed& insert(const size_t pos, const char* other, const size_t sub_pos, const size_t len) {
     size_t available = N - _used;
-    if(!_used) available--;
 
-    if(!len || !available || pos > (_used ? _used - 1 : _used)) return *this;
+    if(!len || !available || pos > _used) return *this;
 
     const char* other_ptr = &(other[sub_pos]);
     size_t length = strlen(other_ptr);
@@ -398,7 +397,7 @@ public:
 
     if(available < length) length = available;
 
-    if(_used && pos < _used - 1)
+    if(_used && pos < _used)
       memmove(&buffer[pos + length], &buffer[pos], _used - pos);
 
     if(other == buffer) {
@@ -416,10 +415,9 @@ public:
       memcpy(&buffer[pos], other_ptr, length);
     }
 
-    if(!_used) _used++;
     _used += length;
 
-    buffer[_used - 1] = '\0';
+    buffer[_used] = '\0';
 
     return *this;
   }
@@ -457,7 +455,7 @@ class str_dynamic {
   #endif
   char* buffer;
   size_t _used;
-  char static_buffer[N];
+  char static_buffer[N + 1];
   size_t _size;
 
   void maybe_grow(const size_t size, const bool init) {
@@ -466,7 +464,6 @@ class str_dynamic {
     if(init && size <= N) return;
 
     size_t new_size = _used + size;
-    if(!_used && !init) new_size++;
 
     if(new_size <= _size) return;
 
@@ -573,7 +570,7 @@ public:
   }
 
   str_dynamic& insert(const size_t pos, const char* other, const size_t sub_pos, const size_t len) {
-    if(!len || pos > _used - 1) return *this;
+    if(!len || pos > _used) return *this;
 
     const char* other_ptr = &(other[sub_pos]);
     size_t length = strlen(other_ptr);
@@ -585,7 +582,7 @@ public:
 
     maybe_grow(length, false);
 
-    if(_used && pos < _used - 1)
+    if(_used && pos < _used)
       memmove(&buffer[pos + length], &buffer[pos], _used - pos);
 
     if(is_self) {
@@ -604,10 +601,9 @@ public:
       memcpy(&buffer[pos], other_ptr, length);
     }
 
-    if(!_used) _used++;
     _used += length;
 
-    buffer[_used - 1] = '\0';
+    buffer[_used] = '\0';
 
     return *this;
   }
@@ -629,19 +625,17 @@ public:
       #endif
 
       buffer = static_buffer;
-      buffer[_used - 1] = '\0';
+      buffer[_used] = '\0';
       _size = N;
     } else {
       if(buffer == static_buffer) {
         char* new_buffer = nullptr;
 
         #ifdef ARENA_POOL_CPP
-        if(_arena) new_buffer = _arena->allocate_size<char>(size);
+        if(_arena) new_buffer = _arena->allocate_size<char>(size + 1);
         else
-          new_buffer = static_cast<char *>(malloc(sizeof(char) * size));
-        #else
-        new_buffer = static_cast<char *>(malloc(sizeof(char) * size));
         #endif
+        new_buffer = static_cast<char *>(malloc(sizeof(char) * (size + 1)));
 
         if(new_buffer) {
           memcpy(new_buffer, buffer, _used);
@@ -653,26 +647,21 @@ public:
 
         #ifdef ARENA_POOL_CPP
         if(_arena) {
-          new_buffer = _arena->allocate_size<char>(size);
+          new_buffer = _arena->allocate_size<char>(size + 1);
 
           if(new_buffer) {
             memcpy(new_buffer, buffer, _used < size ? _used : size);
           }
-        } else {
-          new_buffer = static_cast<char *>(
-            realloc(buffer, sizeof(char) * size)
-          );
-        }
-        #else
-        new_buffer = static_cast<char *>(
-          realloc(buffer, sizeof(char) * size)
-        );
+        } else
         #endif
+        new_buffer = static_cast<char *>(
+          realloc(buffer, sizeof(char) * (size + 1))
+        );
 
         if(new_buffer) {
           if(_used > size) {
             _used = size;
-            new_buffer[_used - 1] = '\0';
+            new_buffer[_used] = '\0';
           }
 
           buffer = new_buffer;
@@ -708,7 +697,7 @@ public:
     if(_arena) return;
     #endif
 
-    if(_size <= 1 || _used == _size) return;
+    if(_size < 1 || _used == _size) return;
 
     resize(_used);
   }
