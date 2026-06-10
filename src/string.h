@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.2.2
+ * Version: 0.2.3
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -210,6 +210,8 @@ namespace apc {
     for(size_t i = size - 1; i >= 0; i--) { \
       if(buffer[i] == '\n' || buffer[i] == '\r' || buffer[i] == ' ' || buffer[i] == '\t') trim_end++; \
       else break; \
+      \
+      if(i == 0) break;\
     } \
     \
     remaining -= trim_end; \
