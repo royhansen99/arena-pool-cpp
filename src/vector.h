@@ -349,9 +349,10 @@ public:
   }
 
   void reset() {
-    for(size_t i = 0; i < _used; i++)
-      if(!std::is_trivially_destructible<T>::value)
+    if(!std::is_trivially_destructible<T>::value) {
+      for(size_t i = 0; i < _used; i++)
         buffer[i].~T();
+    }
 
     _used = 0;
   }
