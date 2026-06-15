@@ -268,3 +268,13 @@ Mostly the same as apc::vector, except that it is fixed size.
 These method are not available on `apc::vector_fixed`, since it is fixed-size:  
 - resize()  
 - shrink\_to\_fit()  
+
+### Build tests 
+
+// MacOS
+> cmake -S . -B build -G Xcode
+
+// Windows
+> cmake -S . -B build -G "Visual Studio 17 2022"
+
+Open the appropriate project-file in Xcode or visual studio, choose the target executable to build/run.
