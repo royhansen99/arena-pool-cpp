@@ -222,4 +222,27 @@ int main() {
       pool.used() == 4 
     );
   }
+
+  // ------------------------------------------------------------------
+  // Static pool 
+  // ------------------------------------------------------------------
+  {
+    apc::pool_fixed<int, 3> pool;
+    assert(pool.size() == 3 && pool.used() == 0);
+
+    int* a = pool.allocate_new(111);
+    int* b = pool.allocate_new(222);
+    int* c = pool.allocate_new(333);
+    int* d = pool.allocate_new(444);
+
+    assert(
+      a != nullptr && b != nullptr && c != nullptr && d == nullptr &&
+      *a == 111 && *b == 222 && *c == 333 &&
+      pool.used() == 3 && pool.size() == 3
+    );
+
+    pool.deallocate(b);
+
+    assert(pool.used() == 2);
+  }
 }
