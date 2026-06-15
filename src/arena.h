@@ -351,6 +351,16 @@ public:
     }
   }
 
+  void init(const size_t pool_size) {
+    if(pool_size) grow(pool_size);
+  }
+
+  void init(apc::arena &_arena, const size_t pool_size) {
+    if(size() == 0) arena = _arena;
+
+    if(pool_size) grow(pool_size);
+  }
+
   bool grow(const size_t size) {
     pool_item<T>* new_buffer = nullptr;
     size_t new_count = pages_size + 1;
