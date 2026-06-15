@@ -250,6 +250,13 @@ int main() {
       arr.used() == 5 
     );
 
+    arr.resize(3);
+
+    assert(
+      arr.size() == 3 &&
+      arr.used() == 3
+    );
+
     arr.reset();
 
     assert(arr.used() == 0);

@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.2.3
+ * Version: 0.2.4
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -684,24 +684,36 @@ public:
 
     #ifdef ARENA_POOL_CPP
     if(_arena) {
-      if(size < this->buffer_size) return false;
-
-      new_buffer = _arena->allocate_size<T>(size);
-
-      if(new_buffer) {
-        if(std::is_trivially_copyable<T>::value)
-          memcpy(new_buffer, this->buffer, sizeof(T) * copy_size);
-
-        if(!std::is_trivially_destructible<T>::value ||
-            !std::is_trivially_copyable<T>::value
-        ) {
-          for(size_t i = 0; i < this->_used; i++) {
-            if(!std::is_trivially_copyable<T>::value &&
-              i < copy_size
-            ) new (&new_buffer[i]) T(std::move(this->buffer[i]));
-
-            if(!std::is_trivially_destructible<T>::value)
+      if(size < this->buffer_size) {
+        if(this->_used > size) {
+          if(!std::is_trivially_destructible<T>::value) {
+            for(size_t i = size - 1; i < this->_used; i++) {
               this->buffer[i].~T();
+            }
+          }
+
+          this->_used = size;
+        }
+
+        this->buffer_size = size;
+      } else {
+        new_buffer = _arena->allocate_size<T>(size);
+
+        if(new_buffer) {
+          if(std::is_trivially_copyable<T>::value)
+            memcpy(new_buffer, this->buffer, sizeof(T) * copy_size);
+
+          if(!std::is_trivially_destructible<T>::value ||
+              !std::is_trivially_copyable<T>::value
+          ) {
+            for(size_t i = 0; i < this->_used; i++) {
+              if(!std::is_trivially_copyable<T>::value &&
+                i < copy_size
+              ) new (&new_buffer[i]) T(std::move(this->buffer[i]));
+
+              if(!std::is_trivially_destructible<T>::value)
+                this->buffer[i].~T();
+            }
           }
         }
       }
