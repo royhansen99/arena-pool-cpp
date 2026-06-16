@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.2.6
+ * Version: 0.2.7
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -11,15 +11,18 @@
  */
 #pragma once
 
-#include <utility>
-#include <cstdlib>
-#include <cstddef>
-#include <type_traits>
-#include <cstring>
-#include <new>
+// #include <utility>
+// #include <cstdlib>
+// #include <cstddef>
+// #include <type_traits>
+// #include <cstring>
+// #include <new>
+#ifdef ARENA_POOL_CPP
+#include "./arena.h"
+#endif
 
 #ifndef APC_VECTOR_STD_VECTORS_DISABLE 
-  #include <vector>
+#include <vector>
 #endif
 
 namespace apc {

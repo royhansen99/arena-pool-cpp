@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.2.6
+ * Version: 0.2.7
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -14,8 +14,12 @@
 #include <cstddef>
 #include <type_traits>
 #include "./vector.h"
-#include "./arena.h"
+#include "./pool.h"
 #include "./rapidhash.h"
+
+#ifdef ARENA_POOL_CPP
+#include "./arena.h"
+#endif
 
 namespace apc {
 

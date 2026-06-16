@@ -1,10 +1,11 @@
 // COMPILE: g++ -std=c++11 -Wall -fsanitize=address tests/tests_pool.cpp
 
-#include "../src/arena.h"
 #include <cassert>
 #include <cstring>
 #include <iostream>
 #include <string>
+#include "../src/arena.h"
+#include "../src/pool.h"
 
 int main() {
   std::cout << "Running Pool tests...\n";
