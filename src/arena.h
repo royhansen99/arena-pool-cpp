@@ -295,6 +295,9 @@ struct pool_page_fixed {
       free_ptr = item; \
       \
       _used--; \
+    } \
+    pool_item<T>* used_ptr() { \
+      return use_ptr; \
     }
 
 template <typename T>
@@ -305,6 +308,7 @@ private:
   pool_page<T>* pages = nullptr;
   size_t pages_size = 0;
 
+public:
   T* allocate_raw() {
     if(!free_ptr) {
       if(!grow(size() ? size() * 2 : 1)) return nullptr;
@@ -356,7 +360,7 @@ public:
   }
 
   void init(apc::arena &_arena, const size_t pool_size) {
-    if(size() == 0) arena = _arena;
+    if(size() == 0) arena = &_arena;
 
     if(pool_size) grow(pool_size);
   }
@@ -411,6 +415,7 @@ private:
   pool_page_fixed<T, S> pages[1];  
   size_t pages_size = 1;
 
+public:
   T* allocate_raw() {
     if(!free_ptr) return nullptr;
 
