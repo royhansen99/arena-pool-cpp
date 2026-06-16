@@ -18,7 +18,7 @@
 #include <cstring>
 #include <new>
 
-#ifndef SARRAY_STD_VECTORS_DISABLE 
+#ifndef APC_VECTOR_STD_VECTORS_DISABLE 
   #include <vector>
 #endif
 
@@ -96,7 +96,7 @@ public:
     return *this;
   }
 
-  #ifndef SARRAY_STD_VECTORS_DISABLE
+  #ifndef APC_VECTOR_STD_VECTORS_DISABLE
   ivector& operator=(const std::vector<T>& other) {
     if(!buffer_size) return *this;
 
@@ -403,7 +403,7 @@ public:
     this->operator=(&list);
   }
 
-  #ifndef SARRAY_STD_VECTORS_DISABLE
+  #ifndef APC_VECTOR_STD_VECTORS_DISABLE
   vector_fixed(const std::vector<T>& other) : vector_fixed() {
     this->operator=(other);
   }
@@ -468,7 +468,7 @@ public:
     this->operator=(&list);
   }
 
-  #ifndef SARRAY_STD_VECTORS_DISABLE
+  #ifndef APC_VECTOR_STD_VECTORS_DISABLE
   vector(const std::vector<T>& other) :
     vector(other.size())
   {
@@ -581,7 +581,7 @@ public:
     return *this;
   }
 
-  #ifndef SARRAY_STD_VECTORS_DISABLE
+  #ifndef APC_VECTOR_STD_VECTORS_DISABLE
   vector& operator=(const std::vector<T>& other) {
     maybe_grow(other.size());
     ivector<T>::operator=(other);
