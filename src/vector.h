@@ -497,7 +497,7 @@ public:
   }
 
   vector(const vector<T>& other) :
-    vector(other._arena, other.buffer_size)
+    vector(*other._arena, other.buffer_size)
   {
     this->operator=(other);
   }
@@ -515,11 +515,6 @@ public:
   }
 
   #ifdef ARENA_POOL_CPP
-  vector(arena* __arena, const size_t size) : ivector<T>(), _arena(nullptr) {
-    if(__arena) init(*__arena, size);
-    else init(size);
-  }
-
   vector(arena &__arena, const size_t size) : ivector<T>(), _arena(nullptr) {
     init(__arena, size);
   }
