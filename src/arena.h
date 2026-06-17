@@ -68,13 +68,13 @@ public:
     return static_cast<T*>(allocate_raw(size, alignment));
   }
 
-  template <typename T>
-  T* allocate(T& item, bool trivially_copyable = false) {
+  template <typename T, bool FORCE_TRIVIAL_COPY = false>
+  T* allocate(T& item) {
     T* new_item = allocate_size<T>();
 
     if(!new_item) return nullptr;
 
-    if(std::is_trivially_copyable<T>::value || trivially_copyable)
+    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
       memcpy(new_item, &item, sizeof(T));
     else
       new (new_item) T(item);
@@ -82,18 +82,18 @@ public:
     return new_item;
   }
 
-  template <typename T>
-  T* allocate(T&& item, bool trivially_copyable = false) {
-    return allocate(item, trivially_copyable);
+  template <typename T, bool FORCE_TRIVIAL_COPY = false>
+  T* allocate(T&& item) {
+    return allocate<T, FORCE_TRIVIAL_COPY>(item);
   }
 
-  template <typename T>
-  T* allocate(T* item, size_t size, bool trivially_copyable = false) {
+  template <typename T, bool FORCE_TRIVIAL_COPY = false>
+  T* allocate(T* item, size_t size) {
     T* new_item = allocate_size<T>(size);
 
     if(!new_item) return nullptr;
 
-    if(std::is_trivially_copyable<T>::value || trivially_copyable)
+    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
       memcpy(new_item, item, sizeof(T) * size);
     else {
       for(size_t i = 0; i < size; i++)

@@ -107,7 +107,7 @@ int main() {
       );
 
       // Force trivial memcpy copy.
-      auto* test2 = arena.allocate(strings, sizeof(strings) / sizeof(strings[0]), true);
+      auto* test2 = arena.allocate<apc::str32, true>(strings, sizeof(strings) / sizeof(strings[0]));
 
       assert(
         test2 != strings &&
