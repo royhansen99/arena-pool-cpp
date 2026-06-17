@@ -105,6 +105,17 @@ int main() {
         test[1] == "Second" &&
         test[2] == "Third"
       );
+
+      // Force trivial memcpy copy.
+      auto* test2 = arena.allocate(strings, sizeof(strings) / sizeof(strings[0]), true);
+
+      assert(
+        test2 != strings &&
+        test2 != test &&
+        test2[0] == "First" &&
+        test2[1] == "Second" &&
+        test2[2] == "Third"
+      );
     }
   }
 

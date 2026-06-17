@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.2.7
+ * Version: 0.2.8
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -69,12 +69,12 @@ public:
   }
 
   template <typename T>
-  T* allocate(T& item) {
+  T* allocate(T& item, bool trivially_copyable = false) {
     T* new_item = allocate_size<T>();
 
     if(!new_item) return nullptr;
 
-    if(std::is_trivially_copyable<T>::value)
+    if(std::is_trivially_copyable<T>::value || trivially_copyable)
       memcpy(new_item, &item, sizeof(T));
     else
       new (new_item) T(item);
@@ -83,17 +83,17 @@ public:
   }
 
   template <typename T>
-  T* allocate(T&& item) {
-    return allocate(item);
+  T* allocate(T&& item, bool trivially_copyable = false) {
+    return allocate(item, trivially_copyable);
   }
 
   template <typename T>
-  T* allocate(T* item, size_t size) {
+  T* allocate(T* item, size_t size, bool trivially_copyable = false) {
     T* new_item = allocate_size<T>(size);
 
     if(!new_item) return nullptr;
 
-    if(std::is_trivially_copyable<T>::value)
+    if(std::is_trivially_copyable<T>::value || trivially_copyable)
       memcpy(new_item, item, sizeof(T) * size);
     else {
       for(size_t i = 0; i < size; i++)
