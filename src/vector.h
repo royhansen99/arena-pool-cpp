@@ -11,12 +11,6 @@
  */
 #pragma once
 
-// #include <utility>
-// #include <cstdlib>
-// #include <cstddef>
-// #include <type_traits>
-// #include <cstring>
-// #include <new>
 #ifdef ARENA_POOL_CPP
 #include "./arena.h"
 #endif
@@ -27,7 +21,7 @@
 
 namespace apc {
 
-template <typename T>
+template <typename T, bool FORCE_TRIVIAL_COPY = false>
 class ivector {
 protected: 
   T* buffer;
@@ -188,15 +182,13 @@ private:
   void insert_make_room_for_count(const size_t &position, const size_t& count) {
     if(position == _used) return;
 
-    if(std::is_trivially_copyable<T>::value) {
+    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
       memmove(
         &buffer[position + count],
         &buffer[position],
         sizeof(T) * (_used - position)
       );
-    }
-
-    if(!std::is_trivially_destructible<T>::value ||
+    } else if(!std::is_trivially_destructible<T>::value ||
       !std::is_trivially_copyable<T>::value
     ) {
       for(size_t i = _used - 1 + count; i >= (position + count); i--) {
@@ -218,7 +210,7 @@ public:
     insert_make_room_for_count(position, count);
        
     for(size_t i = 0; i < count; i++) {
-      if(std::is_trivially_copyable<T>::value)
+      if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
         memcpy(&buffer[position + i], &item, sizeof(T));
       else
         new (&buffer[position + i]) T(std::forward<U>(item)); 
@@ -295,7 +287,7 @@ public:
   T* push(U &&item) {
     if(_used == buffer_size) return nullptr;
 
-    if(std::is_trivially_copyable<T>::value) {
+    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
       memcpy(buffer + _used, &item, sizeof(T));
     } else {
       new (buffer + _used) T(std::forward<U>(item));
@@ -328,11 +320,11 @@ public:
   void erase(const size_t pos) {
     if(!buffer_size || pos <  0 || pos >= _used) return;
 
-    if(!std::is_trivially_destructible<T>::value)
+    if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY)
       buffer[pos].~T();
 
     if(pos < _used - 1) {
-      if(std::is_trivially_copyable<T>::value && std::is_trivially_destructible<T>::value) {
+      if(FORCE_TRIVIAL_COPY || std::is_trivially_copyable<T>::value) {
         memmove(buffer + pos, buffer + pos + 1, sizeof(T) * (_used - 1 - pos));
       } else {
         for(size_t i = pos + 1; i < _used; i++) {
@@ -351,7 +343,7 @@ public:
   }
 
   void reset() {
-    if(!std::is_trivially_destructible<T>::value) {
+    if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
       for(size_t i = 0; i < _used; i++)
         buffer[i].~T();
     }
@@ -390,7 +382,7 @@ template <typename T>
 class vector_fixed_mixin<T, true> {
 };
 
-template <typename T, size_t N>
+template <typename T, size_t N, bool FORCE_TRIVIAL_COPY = false>
 class vector_fixed final : public ivector<T>, public vector_fixed_mixin<T, std::is_trivially_destructible<T>::value> {
   char static_buffer[sizeof(T) * N];
 
@@ -417,7 +409,7 @@ public:
   }
 };
 
-template <typename T>
+template <typename T, bool FORCE_TRIVIAL_COPY = false>
 class vector final : public ivector<T> {
   #ifdef ARENA_POOL_CPP
   arena* _arena;
@@ -542,7 +534,7 @@ public:
   #endif
 
   ~vector() {
-    if(!std::is_trivially_destructible<T>::value) {
+    if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
       for(size_t i = 0; i < this->_used; i++)
         this->buffer[i].~T();
     }
@@ -684,7 +676,7 @@ public:
     if(_arena) {
       if(size < this->buffer_size) {
         if(this->_used > size) {
-          if(!std::is_trivially_destructible<T>::value) {
+          if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
             for(size_t i = size - 1; i < this->_used; i++) {
               this->buffer[i].~T();
             }
@@ -698,10 +690,9 @@ public:
         new_buffer = _arena->allocate_size<T>(size);
 
         if(new_buffer) {
-          if(std::is_trivially_copyable<T>::value)
+          if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
             memcpy(new_buffer, this->buffer, sizeof(T) * copy_size);
-
-          if(!std::is_trivially_destructible<T>::value ||
+          else if(!std::is_trivially_destructible<T>::value ||
               !std::is_trivially_copyable<T>::value
           ) {
             for(size_t i = 0; i < this->_used; i++) {
@@ -719,26 +710,27 @@ public:
     #else
     {
     #endif
-      if(std::is_trivially_copyable<T>::value)
+      if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
         new_buffer = static_cast<T*>(
           realloc(this->buffer, sizeof(T) * size)
         );
-      else
+      else {
         new_buffer = static_cast<T*>(malloc(sizeof(T) * size));
 
-      if(new_buffer && (!std::is_trivially_destructible<T>::value ||
-        !std::is_trivially_copyable<T>::value)
-      ) {
-        for(size_t i = 0; i < this->_used; i++) {
-            if(!std::is_trivially_copyable<T>::value && i < copy_size)
-              new (&new_buffer[i]) T(std::move(this->buffer[i]));
+        if(new_buffer && (!std::is_trivially_destructible<T>::value ||
+          !std::is_trivially_copyable<T>::value)
+        ) {
+          for(size_t i = 0; i < this->_used; i++) {
+              if(!std::is_trivially_copyable<T>::value && i < copy_size)
+                new (&new_buffer[i]) T(std::move(this->buffer[i]));
 
-            if(!std::is_trivially_destructible<T>::value)
-              this->buffer[i].~T();
+              if(!std::is_trivially_destructible<T>::value)
+                this->buffer[i].~T();
+          }
+
+          if(!std::is_trivially_copyable<T>::value)
+            free(this->buffer);
         }
-
-        if(!std::is_trivially_copyable<T>::value)
-          free(this->buffer);
       }
     }
 
