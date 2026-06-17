@@ -60,6 +60,8 @@ public:
 
   template <typename T>
   T* allocate_size(const size_t count = 1) {
+    if(!count) return nullptr;
+
     size_t alignment = alignof(T);
     size_t size = sizeof(T) * count;
 
@@ -67,7 +69,7 @@ public:
   }
 
   template <typename T>
-  T* allocate(T&& item) {
+  T* allocate(T& item) {
     T* new_item = allocate_size<T>();
 
     if(!new_item) return nullptr;
@@ -80,9 +82,32 @@ public:
     return new_item;
   }
 
+  template <typename T>
+  T* allocate(T&& item) {
+    return allocate(item);
+  }
+
+  template <typename T>
+  T* allocate(T* item, size_t size) {
+    T* new_item = allocate_size<T>(size);
+
+    if(!new_item) return nullptr;
+
+    if(std::is_trivially_copyable<T>::value)
+      memcpy(new_item, item, sizeof(T) * size);
+    else {
+      for(size_t i = 0; i < size; i++)
+        new (&new_item[i]) T(item[i]);
+    }
+
+    return new_item;
+  }
+
   void* allocate_raw(const size_t size,
     const size_t alignment = alignof(std::max_align_t)
   ) {
+    if(!size) return nullptr;
+
     for(size_t i = 0; i <= pages_size; i++) {
       arena_page *page;
       char* buffer;

@@ -1,6 +1,7 @@
 // COMPILE: g++ -std=c++11 -Wall -fsanitize=address tests_arena.cpp
 
 #include "../src/arena.h"
+#include "../src/string.h"
 #include <cassert>
 #include <cstring>
 #include <iostream>
@@ -78,6 +79,31 @@ int main() {
         *a == "Hello" &&
         *b == "Hello" &&
         *c == 9
+      );
+    }
+
+    {
+      apc::arena arena(1000);
+
+      char text[] = "Hello world!";
+
+      char* str = arena.allocate(text, sizeof(text));
+
+      assert(
+        text != str &&
+        strcmp(str, text) == 0
+      );
+
+
+      apc::str32 strings[] = {"First", "Second", "Third"};
+
+      auto* test = arena.allocate(strings, sizeof(strings) / sizeof(strings[0]));
+
+      assert(
+        test != strings &&
+        test[0] == "First" &&
+        test[1] == "Second" &&
+        test[2] == "Third"
       );
     }
   }
