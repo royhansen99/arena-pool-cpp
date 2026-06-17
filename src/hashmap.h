@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.2.9
+ * Version: 0.3.0
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -107,7 +107,7 @@ struct hashmap_item {
   }
 
 
-template <typename T, size_t S, size_t Z>
+template <typename T, size_t S, size_t Z, bool FORCE_TRIVIAL_COPY = false>
 class hashmap_fixed {
 private:
   apc::vector_fixed<hashmap_item<T, S>*, Z> array;
@@ -131,7 +131,15 @@ public:
 
     while(current != nullptr) {
       if(memcmp(current->key, key, S) == 0) {
-        memcpy(&current->current, &item, sizeof(T));
+        if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
+          memcpy(&current->current, &item, sizeof(T));
+        } else {
+          if(!std::is_trivially_destructible<T>::value)
+            current->current.~T();
+
+          new (&current->current) T(item);
+        }
+
         return true;
       }
 
@@ -143,7 +151,12 @@ public:
     if(n == nullptr) return false;
 
     memcpy(n->key, key, S);
-    memcpy(&n->current, &item, sizeof(T));
+
+    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
+      memcpy(&n->current, &item, sizeof(T));
+    else
+      new (&n->current) T(item);
+
     n->next = *location;
 
     *location = n;
@@ -154,7 +167,7 @@ public:
   }
 };
 
-template <typename T, size_t S>
+template <typename T, size_t S, bool FORCE_TRIVIAL_COPY = false>
 class hashmap {
 private:
   #ifdef ARENA_POOL_CPP
@@ -209,7 +222,15 @@ public:
 
     while(current != nullptr) {
       if(memcmp(current->key, key, S) == 0) {
-        memcpy(&current->current, &item, sizeof(T));
+        if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
+          memcpy(&current->current, &item, sizeof(T));
+        } else {
+          if(!std::is_trivially_destructible<T>::value)
+            current->current.~T();
+
+          new (&current->current) T(item);
+        }
+
         return true;
       }
 
@@ -221,7 +242,12 @@ public:
     if(n == nullptr) return false;
 
     memcpy(n->key, key, S);
-    memcpy(&n->current, &item, sizeof(T));
+
+    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
+      memcpy(&n->current, &item, sizeof(T));
+    else
+      new (&n->current) T(item);
+
     n->next = *location;
 
     *location = n;
