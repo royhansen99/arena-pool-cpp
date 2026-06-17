@@ -99,17 +99,22 @@ struct pool_page_fixed {
     } \
     \
     template <typename U> \
-    T* allocate(U &&item) { \
+    T* allocate(U &item) { \
       T* new_item = allocate_raw(); \
       \
       if(!new_item) return nullptr; \
       \
-      if(std::is_trivially_copyable<T>::value) \
+      if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) \
         memcpy(new_item, &item, sizeof(T)); \
       else \
         new (new_item) T(std::forward<U>(item)); \
       \
       return new_item; \
+    } \
+    \
+    template <typename U> \
+    T* allocate(U &&item) { \
+      return allocate(item); \
     } \
     \
     void deallocate(T* ptr) { \
@@ -125,7 +130,7 @@ struct pool_page_fixed {
       /* it is nullptr. */ \
       if(use_ptr != item && item->prev == nullptr) return; \
       \
-      if(!std::is_trivially_destructible<T>::value) item->value.~T(); \
+      if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) item->value.~T(); \
       \
       if(item->prev) item->prev->next = item->next; \
       if(item->next) item->next->prev = item->prev; \
@@ -141,7 +146,7 @@ struct pool_page_fixed {
       return use_ptr; \
     }
 
-template <typename T>
+template <typename T, bool FORCE_TRIVIAL_COPY = false>
 class pool {
 private:
   #ifdef ARENA_POOL_CPP
@@ -173,7 +178,6 @@ public:
   POOL_CLASS_COMMON
 
 public:
-
   #ifdef ARENA_POOL_CPP
   pool(apc::arena &_arena, const size_t pool_size = 0) : arena(&_arena) {
     if(pool_size) grow(pool_size);
@@ -275,7 +279,7 @@ public:
   }
 };
 
-template <typename T, size_t S>
+template <typename T, size_t S, bool FORCE_TRIVIAL_COPY = false>
 class pool_fixed {
 private:
   pool_page_fixed<T, S> pages[1];  
