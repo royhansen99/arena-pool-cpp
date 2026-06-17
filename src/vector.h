@@ -188,12 +188,9 @@ private:
         &buffer[position],
         sizeof(T) * (_used - position)
       );
-    } else if(!std::is_trivially_destructible<T>::value ||
-      !std::is_trivially_copyable<T>::value
-    ) {
+    } else {
       for(size_t i = _used - 1 + count; i >= (position + count); i--) {
-        if(!std::is_trivially_copyable<T>::value)
-          new (&buffer[i]) T(std::move(buffer[i - count]));
+         new (&buffer[i]) T(std::move(buffer[i - count]));
 
         if(!std::is_trivially_destructible<T>::value)
           buffer[i - count].~T();
@@ -328,10 +325,7 @@ public:
         memmove(buffer + pos, buffer + pos + 1, sizeof(T) * (_used - 1 - pos));
       } else {
         for(size_t i = pos + 1; i < _used; i++) {
-          if(std::is_trivially_copyable<T>::value)
-            memcpy(&(buffer[pos - 1]), &(buffer[pos]), sizeof(T));
-          else
-            new (&buffer[i - 1]) T(std::move(buffer[i]));
+          new (&buffer[i - 1]) T(std::move(buffer[i]));
 
           if(!std::is_trivially_destructible<T>::value)
             buffer[i].~T();
@@ -692,13 +686,9 @@ public:
         if(new_buffer) {
           if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
             memcpy(new_buffer, this->buffer, sizeof(T) * copy_size);
-          else if(!std::is_trivially_destructible<T>::value ||
-              !std::is_trivially_copyable<T>::value
-          ) {
+          else { 
             for(size_t i = 0; i < this->_used; i++) {
-              if(!std::is_trivially_copyable<T>::value &&
-                i < copy_size
-              ) new (&new_buffer[i]) T(std::move(this->buffer[i]));
+              if(i < copy_size) new (&new_buffer[i]) T(std::move(this->buffer[i]));
 
               if(!std::is_trivially_destructible<T>::value)
                 this->buffer[i].~T();
@@ -717,19 +707,16 @@ public:
       else {
         new_buffer = static_cast<T*>(malloc(sizeof(T) * size));
 
-        if(new_buffer && (!std::is_trivially_destructible<T>::value ||
-          !std::is_trivially_copyable<T>::value)
-        ) {
+        if(new_buffer) {
           for(size_t i = 0; i < this->_used; i++) {
-              if(!std::is_trivially_copyable<T>::value && i < copy_size)
+              if(i < copy_size)
                 new (&new_buffer[i]) T(std::move(this->buffer[i]));
 
               if(!std::is_trivially_destructible<T>::value)
                 this->buffer[i].~T();
           }
 
-          if(!std::is_trivially_copyable<T>::value)
-            free(this->buffer);
+          free(this->buffer);
         }
       }
     }
