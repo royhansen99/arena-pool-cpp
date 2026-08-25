@@ -99,7 +99,7 @@ struct pool_page_fixed {
     } \
     \
     template <typename U> \
-    T* allocate(U &item) { \
+    T* allocate(U& item) { \
       T* new_item = allocate_raw(); \
       \
       if(!new_item) return nullptr; \
@@ -113,7 +113,7 @@ struct pool_page_fixed {
     } \
     \
     template <typename U> \
-    T* allocate(U &&item) { \
+    T* allocate(U&& item) { \
       return allocate(item); \
     } \
     \
@@ -179,7 +179,7 @@ public:
 
 public:
   #ifdef ARENA_POOL_CPP
-  pool(apc::arena &_arena, const size_t pool_size = 0) : arena(&_arena) {
+  pool(apc::arena& _arena, const size_t pool_size = 0) : arena(&_arena) {
     if(pool_size) grow(pool_size);
   }
   #endif
@@ -214,7 +214,7 @@ public:
   }
 
   #ifdef ARENA_POOL_CPP
-  void init(apc::arena &_arena, const size_t pool_size) {
+  void init(apc::arena& _arena, const size_t pool_size) {
     if(size() == 0) arena = &_arena;
 
     if(pool_size) grow(pool_size);

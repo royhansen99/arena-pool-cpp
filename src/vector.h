@@ -76,7 +76,7 @@ public:
 
     if(_used) reset();
 
-    for(const auto item : *list)
+    for(const auto& item : *list)
       if(!push(item)) break;
 
     return *this;
@@ -155,14 +155,14 @@ public:
   }
 
   template <typename U>
-  T& replace(const size_t pos, U &&item) {
+  T& replace(const size_t pos, U&& item) {
     buffer[pos] = item;
 
     return buffer[pos];
   }
 
   template <typename U>
-  T& replace(iterator pos, U &&item) {
+  T& replace(iterator pos, U&& item) {
     return replace(&*pos - buffer, item);
   }
 
@@ -179,7 +179,7 @@ public:
   }
 
 private:
-  void insert_make_room_for_count(const size_t &position, const size_t& count) {
+  void insert_make_room_for_count(const size_t& position, const size_t& count) {
     if(position == _used) return;
 
     if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
@@ -200,7 +200,7 @@ private:
 
 public:
   template <typename U>
-  T* insert(size_t position, const size_t count, U &&item) {
+  T* insert(size_t position, const size_t count, U&& item) {
     if(!count || _used + count > buffer_size || position > _used || position == buffer_size)
       return nullptr;
 
@@ -219,17 +219,17 @@ public:
   }
 
   template <typename U>
-  T* insert(size_t position, U &&item) {
+  T* insert(size_t position, U&& item) {
     return insert(position, 1, item);
   }
 
   template <typename U>
-  T* insert(iterator pos, const size_t count, U &&item) {
+  T* insert(iterator pos, const size_t count, U&& item) {
     return insert(&*pos - buffer, count, item);
   }
 
   template <typename U>
-  T* insert(iterator pos, U &&item) {
+  T* insert(iterator pos, U&& item) {
     return insert(pos, 1, item);
   }
 
@@ -245,7 +245,7 @@ public:
       memcpy(&buffer[position], list.begin(), sizeof(T) * count);
     } else {
       size_t i = 0;
-      for(const auto &it : list) {
+      for(const auto& it : list) {
         new (&buffer[position + i]) T(std::move(it)); 
 
         i++;
@@ -281,7 +281,7 @@ public:
   }
 
   template <typename U>
-  T* push(U &&item) {
+  T* push(U&& item) {
     if(_used == buffer_size) return nullptr;
 
     if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
@@ -310,7 +310,7 @@ public:
     if(_used) erase(_used - 1);
   }
 
-  void erase_ptr(const T *item) {
+  void erase_ptr(const T* item) {
     erase(((size_t)item - (size_t)buffer) / sizeof(T));
   }
 
@@ -416,7 +416,7 @@ protected:
     this->_used = 0;
   }
 
-  void maybe_grow(const size_t &count) {
+  void maybe_grow(const size_t& count) {
     if(!this->buffer_size) {
       this->init(count);
 
@@ -504,23 +504,23 @@ public:
   }
 
   #ifdef ARENA_POOL_CPP
-  vector(arena &__arena, const size_t size) : ivector<T>(), _arena(nullptr) {
+  vector(arena& __arena, const size_t size) : ivector<T>(), _arena(nullptr) {
     init(__arena, size);
   }
 
-  vector(arena &__arena, const size_t size, const std::initializer_list<T> list) :
+  vector(arena& __arena, const size_t size, const std::initializer_list<T> list) :
     vector(__arena, size) 
   {
     this->operator=(&list);
   }
 
-  vector(arena &__arena, const size_t size, const std::vector<T>& other) :
+  vector(arena& __arena, const size_t size, const std::vector<T>& other) :
     vector(__arena, size) 
   {
     this->operator=(other);
   }
 
-  vector(arena &__arena, const size_t size, const ivector<T>& other) :
+  vector(arena& __arena, const size_t size, const ivector<T>& other) :
     vector(__arena, size) 
   {
     this->operator=(other);
@@ -580,23 +580,23 @@ public:
   #endif
 
   template <typename U>
-  T* insert(size_t position, const size_t count, U &&item) {
+  T* insert(size_t position, const size_t count, U&& item) {
     maybe_grow(count);
     return ivector<T>::insert(position, count, item);
   }
 
   template <typename U>
-  T* insert(size_t position, U &&item) {
+  T* insert(size_t position, U&& item) {
     return insert(position, 1, item);
   }
 
   template <typename U>
-  T* insert(vector::iterator pos, const size_t count, U &&item) {
+  T* insert(vector::iterator pos, const size_t count, U&& item) {
     return insert(&*pos - this->buffer, count, item);
   }
 
   template <typename U>
-  T* insert(vector::iterator pos, U &&item) {
+  T* insert(vector::iterator pos, U&& item) {
     return insert(pos, 1, item);
   }
 
@@ -621,7 +621,7 @@ public:
   }
 
   template <typename U>
-  T* push(U &&item) {
+  T* push(U&& item) {
     maybe_grow(1);
     return ivector<T>::push(item);
   }
@@ -647,7 +647,7 @@ public:
   }
 
   #ifdef ARENA_POOL_CPP
-  void init(arena &__arena, const size_t size) {
+  void init(arena& __arena, const size_t size) {
     if(!size || _arena || this->buffer_size) return;
 
     auto* new_buffer = __arena.allocate_size<T>(size);

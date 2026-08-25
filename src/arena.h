@@ -38,7 +38,7 @@ public:
     if(size) grow(size);
   }
 
-  arena(arena &parent, const size_t size) : parent(&parent) {
+  arena(arena& parent, const size_t size) : parent(&parent) {
     if(size) grow(size);
   }
 
@@ -109,7 +109,7 @@ public:
     if(!size) return nullptr;
 
     for(size_t i = 0; i <= pages_size; i++) {
-      arena_page *page;
+      arena_page* page;
       char* buffer;
 
       if(i == pages_size) {
