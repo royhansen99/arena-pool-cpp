@@ -82,7 +82,7 @@ int main() {
     );
 
     int i = 0;
-    for(auto &it : arr) {
+    for(auto& it : arr) {
       assert(
         (i == 0 && it == 2) || 
         (i == 1 && it == 3) || 
@@ -182,7 +182,7 @@ int main() {
 
     std::string test = "";
 
-    for(const auto &it : arr) {
+    for(const auto& it : arr) {
       test += it + '0';
     }
 
@@ -204,7 +204,7 @@ int main() {
     arr.erase(5); // Out of bound, does nothing.
 
     test = "";
-    for(const auto &it : arr) {
+    for(const auto& it : arr) {
       test += it + '0';
     }
 
@@ -297,7 +297,7 @@ int main() {
       std::string name;
       int age;
 
-      Person(const char* n, int &&a): name(n), age(a) { }
+      Person(const char* n, int&& a): name(n), age(a) { }
     };
 
     apc::vector<Person> arr(3);
@@ -587,7 +587,7 @@ int main() {
     apc::vector<int> copy(org);
     std::string copy_str;
 
-    for(const auto &i : copy)
+    for(const auto& i : copy)
       copy_str += std::to_string(i); 
 
     assert(copy_str == "123456");
@@ -616,7 +616,7 @@ int main() {
     apc::vector<int> copy(std::move(org));
 
     std::string copy_str;
-    for(const auto &i : copy)
+    for(const auto& i : copy)
       copy_str += std::to_string(i); 
 
     assert(

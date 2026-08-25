@@ -145,7 +145,7 @@ int main() {
       std::string name; 
       int age;
 
-      Person(const char* n, int &&a) {
+      Person(const char* n, int&& a) {
         name = n; 
         age = a;
       }

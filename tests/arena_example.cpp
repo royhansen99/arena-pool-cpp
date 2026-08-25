@@ -99,7 +99,7 @@ int main() {
   array.resize(6); // Increase size from 3 to 6.
 
   // Iteration 
-  for(auto &it : array) {
+  for(auto& it : array) {
     std::cout << "Value: " << it << "\n";
   }
 
