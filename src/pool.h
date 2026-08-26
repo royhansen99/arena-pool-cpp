@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.3.0
+ * Version: 0.3.1
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -150,7 +150,7 @@ template <typename T, bool FORCE_TRIVIAL_COPY = false>
 class pool {
 private:
   #ifdef ARENA_POOL_CPP
-  arena* arena = nullptr;
+  apc::arena* arena = nullptr;
   #endif
 
   pool_page<T>* pages = nullptr;

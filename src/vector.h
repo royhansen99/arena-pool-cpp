@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.3.0
+ * Version: 0.3.1
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -406,7 +406,7 @@ public:
 template <typename T, bool FORCE_TRIVIAL_COPY = false>
 class vector final : public ivector<T> {
   #ifdef ARENA_POOL_CPP
-  arena* _arena;
+  apc::arena* _arena;
   #endif
 
 protected:
@@ -504,23 +504,23 @@ public:
   }
 
   #ifdef ARENA_POOL_CPP
-  vector(arena& __arena, const size_t size) : ivector<T>(), _arena(nullptr) {
+  vector(apc::arena& __arena, const size_t size) : ivector<T>(), _arena(nullptr) {
     init(__arena, size);
   }
 
-  vector(arena& __arena, const size_t size, const std::initializer_list<T> list) :
+  vector(apc::arena& __arena, const size_t size, const std::initializer_list<T> list) :
     vector(__arena, size) 
   {
     this->operator=(&list);
   }
 
-  vector(arena& __arena, const size_t size, const std::vector<T>& other) :
+  vector(apc::arena& __arena, const size_t size, const std::vector<T>& other) :
     vector(__arena, size) 
   {
     this->operator=(other);
   }
 
-  vector(arena& __arena, const size_t size, const ivector<T>& other) :
+  vector(apc::arena& __arena, const size_t size, const ivector<T>& other) :
     vector(__arena, size) 
   {
     this->operator=(other);
@@ -647,7 +647,7 @@ public:
   }
 
   #ifdef ARENA_POOL_CPP
-  void init(arena& __arena, const size_t size) {
+  void init(apc::arena& __arena, const size_t size) {
     if(!size || _arena || this->buffer_size) return;
 
     auto* new_buffer = __arena.allocate_size<T>(size);
@@ -744,7 +744,7 @@ public:
   }
 
   #ifdef ARENA_POOL_CPP
-  arena* arena() const {
+  apc::arena* arena() const {
     return _arena;
   }
   #endif
