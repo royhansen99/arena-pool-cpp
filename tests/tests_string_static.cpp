@@ -5,7 +5,7 @@
 #include <iostream>
 
 int main() {
-  std::cout << "Running String tests...\n";
+  std::cout << "Running apc::str static tests...\n";
 
   // ------------------------------------------------------------------
   // Basic usage

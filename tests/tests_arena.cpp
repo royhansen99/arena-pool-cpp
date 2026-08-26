@@ -7,7 +7,7 @@
 #include <iostream>
 
 int main() {
-  std::cout << "Running Arena tests...\n";
+  std::cout << "Running apc::arena tests...\n";
 
   // ------------------------------------------------------------------
   // Basic allocation bounds

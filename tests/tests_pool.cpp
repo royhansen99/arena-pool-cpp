@@ -8,7 +8,7 @@
 #include "../src/pool.h"
 
 int main() {
-  std::cout << "Running Pool tests...\n";
+  std::cout << "Running apc::pool tests...\n";
 
   // ------------------------------------------------------------------
   // Basic allocation bounds

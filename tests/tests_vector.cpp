@@ -4,6 +4,7 @@
 #include "../src/vector.h"
 #include <cassert>
 #include <iostream>
+#include <string>
 
 int main() {
   std::cout << "Running apc::vector tests...\n";

@@ -6,7 +6,7 @@
 #include <iostream>
 
 int main() {
-  std::cout << "Running String tests...\n";
+  std::cout << "Running apc::str arena tests...\n";
 
   // ------------------------------------------------------------------
   // Basic usage

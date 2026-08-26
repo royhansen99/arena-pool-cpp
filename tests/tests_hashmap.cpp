@@ -4,8 +4,11 @@
 #include "../src/hashmap.h"
 #include <cassert>
 #include <cstring>
+#include <iostream>
 
 int main() {
+  std::cout << "Running apc::hasmap tests...\n";
+
   // Dynamic
   {
     apc::hashmap<int, sizeof(int)> map(6);
