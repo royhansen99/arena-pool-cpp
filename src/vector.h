@@ -87,7 +87,7 @@ public:
 
     if(_used) reset();
 
-    for(const auto item : other)
+    for(const auto& item : other)
       if(!push(item)) break;
 
     return *this;
@@ -99,7 +99,7 @@ public:
 
     if(_used) reset();
 
-    for(const auto item : other)
+    for(const auto& item : other)
       if(!push(item)) break;
 
     return *this;
