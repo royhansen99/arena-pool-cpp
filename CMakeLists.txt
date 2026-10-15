@@ -5,6 +5,12 @@ project(ArenaPoolCpp VERSION 1.0)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+if(MSVC)
+    add_compile_options(/W4)
+else()
+    add_compile_options(-Wall -Wextra)
+endif()
+
 add_executable(TestsArena tests/tests_arena.cpp)
 add_executable(TestsPool tests/tests_pool.cpp)
 add_executable(TestsVector tests/tests_vector.cpp)
