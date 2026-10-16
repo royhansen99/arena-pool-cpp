@@ -1,6 +1,6 @@
 /*
  * Package: arena_pool_cpp
- * Version: 0.3.2
+ * Version: 0.3.3
  * License: MIT
  * Github: https://github.com/royhansen99/arena-pool-cpp 
  * Author: Roy Hansen (https://github.com/royhansen99)
@@ -13,7 +13,11 @@
 
 #include <cstring>
 #include <cstdlib>
+
+
+#ifndef APC_STRING_STD_OSTREAM_DISABLE 
 #include <ostream>
+#endif
 
 namespace apc {
 
@@ -456,12 +460,14 @@ public:
   STRING_COMMON_METHODS(str_fixed);
 };
 
+#ifndef APC_STRING_STD_OSTREAM_DISABLE 
 template <size_t N>
 std::ostream& operator<<(std::ostream& os, const str_fixed<N>& str) {
   os << str.c_str();
 
   return os;
 }
+#endif
 
 template <size_t N>
 class str_dynamic {
@@ -724,12 +730,14 @@ public:
   STRING_COMMON_METHODS(str_dynamic);
 };
 
+#ifndef APC_STRING_STD_OSTREAM_DISABLE 
 template <size_t N>
 std::ostream& operator<<(std::ostream& os, const str_dynamic<N>& str) {
   os << str.c_str();
 
   return os;
 }
+#endif
 
 typedef str_fixed<4> str4; 
 
