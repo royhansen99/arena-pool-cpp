@@ -62,7 +62,7 @@ struct pool_page_fixed {
     void reset() { \
       if(!pages_size) return; \
       \
-      if(!std::is_trivially_destructible<T>::value) { \
+      if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) { \
         while(use_ptr) { \
           use_ptr->value.~T(); \
           use_ptr = use_ptr->next; \
@@ -186,7 +186,7 @@ public:
   }
 
   ~pool() {
-    if(!std::is_trivially_destructible<T>::value) {
+    if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
       while(use_ptr) {
         use_ptr->value.~T();
         use_ptr = use_ptr->next;
@@ -307,7 +307,7 @@ public:
   }
 
   ~pool_fixed() {
-    if(!std::is_trivially_destructible<T>::value) {
+    if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
       while(use_ptr != nullptr) {
         use_ptr->value.~T();
         use_ptr = use_ptr->next;
