@@ -1,4 +1,4 @@
-// Compile: g++ -std=c++11 -Wall -fsanitize=address arena_example.cpp
+// Compile: g++ -std=c++11 -Wall -g -fsanitize=address arena_example.cpp
 
 #include "../src/arena.h"
 #include "../src/pool.h"

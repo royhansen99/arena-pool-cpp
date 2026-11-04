@@ -1,4 +1,4 @@
-// COMPILE: g++ -std=c++11 -Wall -fsanitize=address tests/tests_hashmap.cpp
+// COMPILE: g++ -std=c++11 -Wall -g -fsanitize=address tests/tests_hashmap.cpp
 
 #include "../src/arena.h"
 #include "../src/hashmap.h"
