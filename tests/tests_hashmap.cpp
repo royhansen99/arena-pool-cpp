@@ -178,6 +178,13 @@ int main() {
       assert(result == "4,3,2,1");
     }
 
+    { // Erase using iterator.
+      assert(map.erase(map.rbegin()) &&
+        *map.rbegin() == 3 && map.used() == 3);
+      assert(map.erase(map.begin()) &&
+        *map.begin() == 2 && map.used() == 2);
+    }
+
     map.reset();
 
     assert(map.used() == 0 && !(map.begin() != nullptr) &&

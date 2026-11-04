@@ -141,8 +141,16 @@ struct hashmap_item {
     } \
     \
     return false; \
+  } \
+  bool erase(iterator it) { \
+    if(!(it != nullptr)) return false; \
+    \
+    return erase( \
+      (reinterpret_cast<hashmap_item<T, S>*>( \
+        &(*it)) \
+      )->key \
+    ); \
   }
-
 
 template <typename T, size_t S, size_t Z, bool FORCE_TRIVIAL_COPY = false>
 class hashmap_fixed {
