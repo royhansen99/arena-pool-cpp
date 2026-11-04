@@ -91,8 +91,8 @@ struct hashmap_item {
     _reset(true); \
   } \
   \
-  bool insert(T&& item, void* key) { \
-    return insert(item, key); \
+  bool insert(void* key, T&& item) { \
+    return insert(key, item); \
   } \
   \
   T* find(void* key) { \
@@ -166,7 +166,7 @@ public:
     _reset();
   }
 
-  bool insert(T& item, void* key) {
+  bool insert(void* key, T& item) {
     if(!size()) return false;
 
     uint64_t hash = rapidhashNano(key, S);
@@ -257,7 +257,7 @@ public:
   }
   #endif
 
-  bool insert(T& item, void* key) {
+  bool insert(void* key, T& item) {
     if(!size()) init();
     if(!size()) return false;
 

@@ -395,7 +395,7 @@ struct treemap_page {
       return iterator(nullptr); \
     } \
     \
-    bool insert(T& item, K& key) { \
+    bool insert(K& key, T& item) { \
       auto* z = allocate(); \
       \
       if(z == nullptr) return false; \
@@ -443,16 +443,16 @@ struct treemap_page {
       return true; \
     } \
     \
-    bool insert(T& item, K&& key) { \
-      return insert(item, key); \
+    bool insert(K&& key, T& item) { \
+      return insert(key, item); \
     } \
     \
-    bool insert(T&& item, K&& key) { \
-      return insert(item, key); \
+    bool insert(K&& key, T&& item) { \
+      return insert(key, item); \
     } \
     \
-    bool insert(T&& item, K& key) { \
-      return insert(item, key); \
+    bool insert(K& key, T&& item) { \
+      return insert(key, item); \
     } \
     \
     bool erase(K& key) { \

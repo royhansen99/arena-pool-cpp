@@ -16,10 +16,10 @@ int main() {
     assert(map.size() == 6 && map.used() == 0);
 
     int key = 91;
-    map.insert(1, &key);
+    map.insert(&key, 1);
 
     int key2 = 93;
-    map.insert(2, &key2);
+    map.insert(&key2, 2);
       
     assert(
       map.used() == 2 &&
@@ -27,10 +27,10 @@ int main() {
     );
       
     int key3 = 98;
-    map.insert(3, &key3);
+    map.insert(&key3, 3);
       
     int key4 = 1111;
-    map.insert(4, &key4);
+    map.insert(&key4, 4);
 
     assert(
       map.size() == 6 
@@ -61,7 +61,7 @@ int main() {
     assert(map.size() == 0);
 
     for(int i = 0; i < 15; i++)
-      map.insert(i, &i);
+      map.insert(&i, i);
 
     int key = 13;
       
@@ -71,7 +71,7 @@ int main() {
     );
       
     for(int i = 20; i < 40; i++)
-      map.insert(i, &i);
+      map.insert(&i, i);
       
     assert(map.size() == 32); // size doubled
   }
@@ -92,7 +92,7 @@ int main() {
     );
     
     for(int i = 0; i < 32; i++)
-      map.insert(i, &i);
+      map.insert(&i, i);
 
     assert(_arena.used() > used);
   }
@@ -104,10 +104,10 @@ int main() {
     assert(map.size() == 3 && map.used() == 0);
 
     int key = 91;
-    map.insert(1, &key);
+    map.insert(&key, 1);
 
     int key2 = 93;
-    map.insert(2, &key2);
+    map.insert(&key2, 2);
       
     assert(
       map.used() == 2 &&
@@ -115,11 +115,11 @@ int main() {
     );
       
     int key3 = 98;
-    map.insert(3, &key3);
+    map.insert(&key3, 3);
       
     int key4 = 1111;
     assert(
-      !map.insert(4, &key4) && // Full, so not added.
+      !map.insert(&key4, 4) && // Full, so not added.
       map.find(&key4) == nullptr
     );
 
@@ -146,7 +146,7 @@ int main() {
     apc::hashmap<int, sizeof(int)> map;
 
     for(auto i : {1, 2, 3, 4})
-      map.insert(i, &i);
+      map.insert(&i, i);
 
     char num[3];
 
@@ -196,7 +196,7 @@ int main() {
     apc::hashmap_fixed<int, sizeof(int), 10> map;
 
     for(auto i : {1, 2, 3, 4})
-      map.insert(i, &i);
+      map.insert(&i, i);
 
     char num[3];
 
