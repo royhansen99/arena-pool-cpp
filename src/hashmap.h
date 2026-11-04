@@ -91,7 +91,7 @@ struct hashmap_item {
     _reset(true); \
   } \
   \
-  bool insert(void* key, T&& item) { \
+  T* insert(void* key, T&& item) { \
     return insert(key, item); \
   } \
   \
@@ -166,8 +166,8 @@ public:
     _reset();
   }
 
-  bool insert(void* key, T& item) {
-    if(!size()) return false;
+  T* insert(void* key, T& item) {
+    if(!size()) return nullptr;
 
     uint64_t hash = rapidhashNano(key, S);
     size_t index = hash % (size() - 1);      
@@ -186,7 +186,7 @@ public:
           new (&current->current) T(item);
         }
 
-        return true;
+        return &current->current;
       }
 
       current = current->next;
@@ -194,7 +194,7 @@ public:
 
     apc::hashmap_item<T, S>* n = pool.allocate_raw();
 
-    if(n == nullptr) return false;
+    if(n == nullptr) return nullptr;
 
     memcpy(n->key, key, S);
 
@@ -209,7 +209,7 @@ public:
 
     if(n->next == nullptr) _used++;
 
-    return true;
+    return &n->current;
   }
 };
 
@@ -257,9 +257,9 @@ public:
   }
   #endif
 
-  bool insert(void* key, T& item) {
+  T* insert(void* key, T& item) {
     if(!size()) init();
-    if(!size()) return false;
+    if(!size()) return nullptr;
 
     uint64_t hash = rapidhashNano(key, S);
     size_t index = hash % (size() - 1);      
@@ -278,7 +278,7 @@ public:
           new (&current->current) T(item);
         }
 
-        return true;
+        return &current->current;
       }
 
       current = current->next;
@@ -286,7 +286,7 @@ public:
 
     apc::hashmap_item<T, S>* n = pool.allocate_raw();
 
-    if(n == nullptr) return false;
+    if(n == nullptr) return nullptr;
 
     memcpy(n->key, key, S);
 
@@ -331,7 +331,7 @@ public:
       }
     }
 
-    return true;
+    return &n->current;
   }
 };
 
