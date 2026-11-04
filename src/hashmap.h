@@ -91,6 +91,30 @@ struct hashmap_item {
     _reset(true); \
   } \
   \
+  T* insert(void* key, T& item) { \
+    auto* target = insert_raw(key); \
+    \
+    if(target == nullptr) return nullptr; \
+    \
+    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) \
+      memcpy(target, &item, sizeof(T)); \
+    else \
+      new (target) T(item); \
+    \
+    return target; \
+  } \
+  \
+  template <typename... Args> \
+  T* insert_new(void* key, Args&&... args) { \
+    auto* target = insert_raw(key); \
+    \
+    if(target == nullptr) return nullptr; \
+    \
+    new (target) T(std::forward<Args>(args)...);  \
+    \
+    return target; \
+  } \
+  \
   T* insert(void* key, T&& item) { \
     return insert(key, item); \
   } \
@@ -158,15 +182,7 @@ private:
   apc::vector_fixed<hashmap_item<T, S>*, Z> array;
   apc::pool_fixed<hashmap_item<T, S>, Z> pool;
 
-  using target_iterator = typename apc::pool_fixed<hashmap_item<T, S>, Z>::iterator;
-  HASHMAP_CLASS_COMMON(target_iterator)
-
-public:
-  hashmap_fixed() {
-    _reset();
-  }
-
-  T* insert(void* key, T& item) {
+  T* insert_raw(void* key) {
     if(!size()) return nullptr;
 
     uint64_t hash = rapidhashNano(key, S);
@@ -177,14 +193,9 @@ public:
 
     while(current != nullptr) {
       if(memcmp(current->key, key, S) == 0) {
-        if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
-          memcpy(&current->current, &item, sizeof(T));
-        } else {
-          if(!std::is_trivially_destructible<T>::value)
-            current->current.~T();
-
-          new (&current->current) T(item);
-        }
+        if(!std::is_trivially_destructible<T>::value &&
+          !FORCE_TRIVIAL_COPY)
+          current->current.~T();
 
         return &current->current;
       }
@@ -198,11 +209,6 @@ public:
 
     memcpy(n->key, key, S);
 
-    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
-      memcpy(&n->current, &item, sizeof(T));
-    else
-      new (&n->current) T(item);
-
     n->next = *location;
 
     *location = n;
@@ -210,6 +216,14 @@ public:
     if(n->next == nullptr) _used++;
 
     return &n->current;
+  }
+
+  using target_iterator = typename apc::pool_fixed<hashmap_item<T, S>, Z>::iterator;
+  HASHMAP_CLASS_COMMON(target_iterator)
+
+public:
+  hashmap_fixed() {
+    _reset();
   }
 };
 
@@ -223,41 +237,7 @@ private:
   apc::vector<hashmap_item<T, S>*> array;
   apc::pool<hashmap_item<T, S>> pool;
 
-  using target_iterator = typename apc::pool<hashmap_item<T, S>>::iterator;
-  HASHMAP_CLASS_COMMON(target_iterator)
-
-public:
-  hashmap(size_t size = 0) {
-    if(!size) return;
-
-    init(size);
-  }
-
-  void init(size_t _size = 16) {
-    // If requested size is 0, or already initialized, return.
-    if(!_size || size()) return;
-
-    array.init(_size);
-    pool.init(_size);
-    _reset();
-  }
-
-  #ifdef ARENA_POOL_CPP
-  hashmap(apc::arena& arena, size_t size = 16) : _arena(&arena) {
-    init(arena, size);
-  }
-
-  void init(apc::arena& arena, size_t _size = 16) {
-    // If requested size is 0, or already initialized, return.
-    if(!_size || size()) return;
-
-    array.init(arena, _size);
-    pool.init(arena, _size);
-    _reset();
-  }
-  #endif
-
-  T* insert(void* key, T& item) {
+  T* insert_raw(void* key) {
     if(!size()) init();
     if(!size()) return nullptr;
 
@@ -269,14 +249,9 @@ public:
 
     while(current != nullptr) {
       if(memcmp(current->key, key, S) == 0) {
-        if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
-          memcpy(&current->current, &item, sizeof(T));
-        } else {
-          if(!std::is_trivially_destructible<T>::value)
-            current->current.~T();
-
-          new (&current->current) T(item);
-        }
+        if(!std::is_trivially_destructible<T>::value &&
+          !FORCE_TRIVIAL_COPY)
+          current->current.~T();
 
         return &current->current;
       }
@@ -289,11 +264,6 @@ public:
     if(n == nullptr) return nullptr;
 
     memcpy(n->key, key, S);
-
-    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
-      memcpy(&n->current, &item, sizeof(T));
-    else
-      new (&n->current) T(item);
 
     n->next = *location;
 
@@ -333,6 +303,40 @@ public:
 
     return &n->current;
   }
+
+  using target_iterator = typename apc::pool<hashmap_item<T, S>>::iterator;
+  HASHMAP_CLASS_COMMON(target_iterator)
+
+public:
+  hashmap(size_t size = 0) {
+    if(!size) return;
+
+    init(size);
+  }
+
+  void init(size_t _size = 16) {
+    // If requested size is 0, or already initialized, return.
+    if(!_size || size()) return;
+
+    array.init(_size);
+    pool.init(_size);
+    _reset();
+  }
+
+  #ifdef ARENA_POOL_CPP
+  hashmap(apc::arena& arena, size_t size = 16) : _arena(&arena) {
+    init(arena, size);
+  }
+
+  void init(apc::arena& arena, size_t _size = 16) {
+    // If requested size is 0, or already initialized, return.
+    if(!_size || size()) return;
+
+    array.init(arena, _size);
+    pool.init(arena, _size);
+    _reset();
+  }
+  #endif
 };
 
 };

@@ -141,6 +141,26 @@ int main() {
     assert(map.used() == 0);
   }
 
+  // insert_new
+  {
+    struct test {
+      int foo;
+      const char* bar;
+
+      test(int f, const char* b) : foo(f), bar(b) {}
+    };
+
+    apc::hashmap<test, sizeof(int)> map;
+
+    int key = 2;
+    auto* item = map.insert_new(&key, 100, "Test..");
+    auto* find = map.find(&key);
+
+    assert(item != nullptr && item == find &&
+      map.used() == 1 && item->foo == 100 &&
+      strcmp(item->bar, "Test..") == 0);
+  }
+
   // Iterators
   {
     apc::hashmap<int, sizeof(int)> map;
