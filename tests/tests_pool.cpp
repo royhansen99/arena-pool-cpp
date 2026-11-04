@@ -225,6 +225,63 @@ int main() {
   }
 
   // ------------------------------------------------------------------
+  // Iterator 
+  // ------------------------------------------------------------------
+  {
+    apc::pool<int> pool;
+
+    for(auto& i : {1,2,3,4}) pool.allocate(i);
+
+    char num[3] = {'\0'};
+
+    {
+      std::string result;
+
+      for(auto& i : pool) {
+        snprintf(num, 3, "%d", i);
+
+        if(result != "") result += ",";
+
+        result += num;
+      }
+
+      assert(result == "1,2,3,4" && *(pool.begin() + 1) == 2 &&
+        *(pool.rbegin() + 1) == 3);
+    }
+
+    {
+      std::string result;
+
+      for(auto it = pool.rbegin(); it != pool.rend(); ++it) {
+        snprintf(num, 3, "%d", *it);
+
+        if(result != "") result += ",";
+
+        result += num;
+      }
+
+      assert(result == "4,3,2,1");
+    }
+
+    {
+      // Remove last item (4).
+      pool.deallocate(&*pool.rbegin());
+
+      std::string result;
+
+      for(auto it = pool.rbegin(); it != pool.rend(); ++it) {
+        snprintf(num, 3, "%d", *it);
+
+        if(result != "") result += ",";
+
+        result += num;
+      }
+
+      assert(result == "3,2,1");
+    }
+  }
+
+  // ------------------------------------------------------------------
   // Static pool 
   // ------------------------------------------------------------------
   {

@@ -42,9 +42,56 @@ struct pool_page_fixed {
   private: \
     pool_item<T>* free_ptr = nullptr; \
     pool_item<T>* use_ptr = nullptr; \
+    pool_item<T>* last_ptr = nullptr; \
     size_t _used = 0; \
     \
   public: \
+    class iterator { \
+      pool_item<T>* it; \
+      bool _reverse; \
+    public: \
+      explicit iterator(pool_item<T>* begin, bool reverse = false): \
+        it(begin), _reverse(reverse) { } \
+      \
+      T& operator*() const { return it->value; } \
+      \
+      bool operator!=(const iterator& other) const { return it != other.it; } \
+      \
+      bool operator!=(const void* other) const { return it != other; } \
+      \
+      iterator& operator+(size_t count) { \
+        while(count > 0 && it) { \
+          count--; \
+          operator++(); \
+        } \
+        \
+        return *this; \
+      } \
+      \
+      iterator& operator++() { \
+        if(!it) return *this; \
+        \
+        it = _reverse ? (*it).next : (*it).prev; \
+        \
+        return *this; \
+      } \
+    }; \
+    \
+    iterator begin() const { \
+      return iterator(last_ptr); \
+    } \
+    \
+    iterator rbegin() const { \
+      return iterator(use_ptr, true); \
+    } \
+    \
+    const iterator end() const { \
+      return iterator(nullptr); \
+    } \
+    \
+    const iterator rend() const { \
+      return iterator(nullptr); \
+    } \
     size_t size() const { \
       size_t total_size = 0; \
       \
@@ -84,6 +131,8 @@ struct pool_page_fixed {
       free_ptr = &(pages[0].buffer[0]); \
       \
       _used = 0; \
+      last_ptr = nullptr; \
+      use_ptr = nullptr; \
     } \
     \
     template <typename... Args> \
@@ -129,6 +178,7 @@ struct pool_page_fixed {
       \
       if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) item->value.~T(); \
       \
+      if(last_ptr == item) last_ptr = item->prev; \
       if(item->prev) item->prev->next = item->next; \
       if(item->next) item->next->prev = item->prev; \
       if(use_ptr == item) use_ptr = item->next; \
@@ -163,6 +213,8 @@ public:
     free_ptr = free_ptr->next;
 
     if(use_ptr) use_ptr->prev = chunk;
+
+    if(!last_ptr) last_ptr = chunk;
 
     chunk->next = use_ptr;
     chunk->prev = nullptr;
@@ -290,6 +342,8 @@ public:
     free_ptr = free_ptr->next;
 
     if(use_ptr) use_ptr->prev = chunk;
+
+    if(!last_ptr) last_ptr = chunk;
 
     chunk->next = use_ptr;
     chunk->prev = nullptr;
