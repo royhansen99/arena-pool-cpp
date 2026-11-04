@@ -27,7 +27,7 @@ struct hashmap_item {
   hashmap_item<T, S>* next = nullptr;
 };
 
-#define HASHMAP_CLASS_COMMON \
+#define HASHMAP_CLASS_COMMON(ITERATOR) \
   private: \
   size_t _used = 0; \
   \
@@ -42,7 +42,47 @@ struct hashmap_item {
   } \
   \
   public: \
-  \
+  class iterator { \
+    ITERATOR it; \
+  public: \
+    explicit iterator(const ITERATOR&& begin): \
+      it(begin) { } \
+ \
+    T& operator*() const { return (*it).current; } \
+    \
+    bool operator!=(const iterator& other) const { return it != other.it; } \
+    \
+    bool operator!=(const void* other) const { return it != other; } \
+    \
+    iterator& operator+(size_t count) { \
+      it + count; \
+      \
+      return *this; \
+    } \
+    \
+    iterator& operator++() { \
+      ++it; \
+      \
+      return *this; \
+    } \
+  }; \
+ \
+  iterator begin() const { \
+    return iterator(pool.begin()); \
+  } \
+ \
+  iterator rbegin() const { \
+    return iterator(pool.rbegin()); \
+  } \
+ \
+  const iterator end() const { \
+    return iterator(pool.end()); \
+  } \
+ \
+  const iterator rend() const { \
+    return iterator(pool.rend()); \
+  } \
+ \
   size_t size() { return array.size(); } \
   \
   size_t used() { return _used; } \
@@ -110,7 +150,8 @@ private:
   apc::vector_fixed<hashmap_item<T, S>*, Z> array;
   apc::pool_fixed<hashmap_item<T, S>, Z> pool;
 
-  HASHMAP_CLASS_COMMON
+  using target_iterator = typename apc::pool_fixed<hashmap_item<T, S>, Z>::iterator;
+  HASHMAP_CLASS_COMMON(target_iterator)
 
 public:
   hashmap_fixed() {
@@ -174,7 +215,8 @@ private:
   apc::vector<hashmap_item<T, S>*> array;
   apc::pool<hashmap_item<T, S>> pool;
 
-  HASHMAP_CLASS_COMMON
+  using target_iterator = typename apc::pool<hashmap_item<T, S>>::iterator;
+  HASHMAP_CLASS_COMMON(target_iterator)
 
 public:
   hashmap(size_t size = 0) {

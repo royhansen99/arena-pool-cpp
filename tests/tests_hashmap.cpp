@@ -141,5 +141,72 @@ int main() {
     assert(map.used() == 0);
   }
 
+  // Iterators
+  {
+    apc::hashmap<int, sizeof(int)> map;
+
+    for(auto i : {1, 2, 3, 4})
+      map.insert(i, &i);
+
+    char num[3];
+
+    {
+      std::string result;
+
+      for(auto i : map) {
+        snprintf(num, 3, "%d", i);
+
+        if(result != "") result += ",";
+
+        result += num;
+      }
+
+      assert(result == "1,2,3,4");
+    }
+
+    {
+      std::string result;
+
+      for(auto it = map.rbegin(); it != map.rend(); ++it) {
+        snprintf(num, 3, "%d", *it);
+
+        if(result != "") result += ",";
+
+        result += num;
+      }
+
+      assert(result == "4,3,2,1");
+    }
+
+    map.reset();
+
+    assert(map.used() == 0 && !(map.begin() != nullptr) &&
+      !(map.rbegin() != nullptr));
+  }
+
+  // Iterators fixed
+  {
+    apc::hashmap_fixed<int, sizeof(int), 10> map;
+
+    for(auto i : {1, 2, 3, 4})
+      map.insert(i, &i);
+
+    char num[3];
+
+    {
+      std::string result;
+
+      for(auto i : map) {
+        snprintf(num, 3, "%d", i);
+
+        if(result != "") result += ",";
+
+        result += num;
+      }
+
+      assert(result == "1,2,3,4");
+    }
+  }
+
   return 0;
 }
