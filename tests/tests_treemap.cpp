@@ -160,7 +160,25 @@ int main() {
     }
   }
 
-  { // Test find()
+  { /* Test insert_new() */
+    struct test {
+      int foo;
+      const char* bar;
+
+      test(int f, const char* b) : foo(f), bar(b) {}
+    };
+
+    apc::treemap<test, int> map;
+
+    map.insert_new(1, 100, "Test.."); 
+
+    auto* item = map.find(1);
+
+    assert(map.used() == 1 && item != nullptr &&
+      strcmp(item->bar, "Test..") == 0);
+  }
+
+  { /* Test find() */
     apc::treemap_fixed<int, int, 30> map;
 
     auto list = {30, 10, 20, 5, 28, 1, 2, 3};
@@ -358,7 +376,7 @@ int main() {
     apc::treemap_fixed<int, int, 3> map;
 
     assert(map.insert(0, 0) && map.insert(1, 1) && map.insert(2, 2) &&
-      map.insert(3, 3) == false && map.used() == 3 && map.size() == 3); 
+      map.insert(3, 3) == nullptr && map.used() == 3 && map.size() == 3); 
   }
 
   { /* Test dynamic/malloc growth */

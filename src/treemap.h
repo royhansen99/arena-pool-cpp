@@ -287,6 +287,48 @@ struct treemap_page {
       return nullptr; \
     } \
     \
+    treemap_node<T, K>* insert_raw(K& key) { \
+      auto* z = allocate(); \
+      \
+      if(z == nullptr) return nullptr; \
+      \
+      if(std::is_trivially_copyable<K>::value) { \
+        memcpy(&z->key, &key, sizeof(K)); \
+      } else { \
+        new (&z->key) K(std::forward<K>(key));  \
+      } \
+      \
+      auto* x = root; \
+      treemap_node<T, K>* y = nullptr; \
+      \
+      while(x != nullptr) { \
+        y = x; \
+        \
+        if(COMPARE{}(z->key, x->key)) x = x->left; \
+        else x = x->right; \
+      } \
+      \
+      z->parent = y; \
+      \
+      if(y == nullptr) root = z; \
+      else if(COMPARE{}(z->key, y->key)) y->left = z; \
+      else y->right = z; \
+      \
+      z->left = nullptr; \
+      z->right = nullptr; \
+      z->is_red = true; \
+      \
+      insert_fixup(z); \
+      \
+      if(first == nullptr || COMPARE{}(z->key, first->key)) \
+        first = z; \
+      \
+      if(last == nullptr || COMPARE{}(last->key, z->key)) \
+        last = z; \
+      \
+      return z; \
+    } \
+    \
   public: \
     void reset() { \
       if(!pages_size) return; \
@@ -395,10 +437,10 @@ struct treemap_page {
       return iterator(nullptr); \
     } \
     \
-    bool insert(K& key, T& item) { \
-      auto* z = allocate(); \
+    T* insert(K& key, T& item) { \
+      auto* z = insert_raw(key); \
       \
-      if(z == nullptr) return false; \
+      if(z == nullptr) return nullptr; \
       \
       if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) { \
         memcpy(&z->current, &item, sizeof(T)); \
@@ -406,55 +448,35 @@ struct treemap_page {
         new (&z->current) T(std::forward<T>(item));  \
       } \
       \
-      if(std::is_trivially_copyable<K>::value) { \
-        memcpy(&z->key, &key, sizeof(K)); \
-      } else { \
-        new (&z->key) K(std::forward<K>(key));  \
-      } \
+      return &z->current; \
+    } \
+    \
+    T* insert(K&& key, T& item) { \
+      return insert(key, item); \
+    } \
+    \
+    T* insert(K&& key, T&& item) { \
+      return insert(key, item); \
+    } \
+    \
+    T* insert(K& key, T&& item) { \
+      return insert(key, item); \
+    } \
+    template <typename... Args> \
+    bool insert_new(K& key, Args&&... args) { \
+      auto* z = insert_raw(key); \
       \
-      auto* x = root; \
-      treemap_node<T, K>* y = nullptr; \
+      if(z == nullptr) return false; \
       \
-      while(x != nullptr) { \
-        y = x; \
-        \
-        if(COMPARE{}(z->key, x->key)) x = x->left; \
-        else x = x->right; \
-      } \
-      \
-      z->parent = y; \
-      \
-      if(y == nullptr) root = z; \
-      else if(COMPARE{}(z->key, y->key)) y->left = z; \
-      else y->right = z; \
-      \
-      z->left = nullptr; \
-      z->right = nullptr; \
-      z->is_red = true; \
-      \
-      insert_fixup(z); \
-      \
-      if(first == nullptr || COMPARE{}(z->key, first->key)) \
-        first = z; \
-      \
-      if(last == nullptr || COMPARE{}(last->key, z->key)) \
-        last = z; \
+      new (&z->current) T(std::forward<Args>(args)...);  \
       \
       return true; \
     } \
     \
-    bool insert(K&& key, T& item) { \
-      return insert(key, item); \
+    template <typename... Args> \
+    bool insert_new(K&& key, Args&&... args) { \
+      return insert_new(key, args...); \
     } \
-    \
-    bool insert(K&& key, T&& item) { \
-      return insert(key, item); \
-    } \
-    \
-    bool insert(K& key, T&& item) { \
-      return insert(key, item); \
-    } \
-    \
     bool erase(K& key) { \
       auto* z = find_item(key); \
       \
