@@ -315,4 +315,16 @@ int main() {
       assert(s == "");
     }
   }
+
+  // ------------------------------------------------------------------
+  // Move 
+  // ------------------------------------------------------------------
+  {
+    apc::str first = "Hello world!";
+
+    apc::str second(std::move(first));
+
+    assert(first.used() == 0 && first == "" && second.used() == 24 &&
+      second == "Hello world!");
+  }
 }
