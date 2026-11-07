@@ -568,12 +568,12 @@ int main() {
   // Usage with std::unique_ptr 
   // ------------------------------------------------------------------
   {
-    apc::vector<std::unique_ptr<char>> arr(10);
+    apc::vector<std::unique_ptr<char[]>> arr;
 
-    char* str = new char[20];
-    strcpy(str, "Hello world!!");
+    std::unique_ptr<char[]> str(new char[20]);
+    strcpy(str.get(), "Hello world!!");
 
-    arr.push(str);
+    arr.push(std::move(str));
 
     assert(strcmp(arr[0].get(), "Hello world!!") == 0);
   }
@@ -593,14 +593,12 @@ int main() {
 
     assert(copy_str == "123456");
 
-    assert(org.arena() == copy.arena());
-
     apc::vector_fixed<int, 3> fixed({100,200});
 
     apc::vector<int> copy2(fixed);
     
     assert(
-      copy2.size() == 3 &&
+      copy2.size() == 2 &&
       copy2.used() == 2 &&
       copy2[0] == 100 &&
       copy2[1] == 200
@@ -626,6 +624,15 @@ int main() {
       copy.used() == 5 &&
       copy.size() == 5 &&
       copy_str == "12345"
+    );
+    
+    org = std::move(copy);
+      
+    assert(
+      org.used() == 5 &&
+      org.size() == 5 &&
+      copy.size() == 0 &&
+      copy.used() == 0
     );
   }
 

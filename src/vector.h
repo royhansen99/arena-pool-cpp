@@ -61,24 +61,20 @@ public:
     buffer_size(0),
     _used(0) { }
 
-  ivector& operator=(const std::initializer_list<T> list) {
+  ivector& operator=(const std::initializer_list<T>& list) {
     if(!buffer_size) return *this;
 
     if(_used) reset();
 
-    for(const auto item : list)
-      if(!push(item)) break;
+    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
+      _used = list.size();
+      if(buffer_size < _used) _used = buffer_size;
 
-    return *this;
-  }
-
-  ivector& operator=(const std::initializer_list<T>* list) {
-    if(!buffer_size) return *this;
-
-    if(_used) reset();
-
-    for(const auto& item : *list)
-      if(!push(item)) break;
+      memcpy(buffer, list.begin(), _used * sizeof(T));
+    } else {
+      for(const auto& item : list)
+        if(!push(item)) break;
+    }
 
     return *this;
   }
@@ -88,8 +84,15 @@ public:
 
     if(_used) reset();
 
-    for(const auto& item : other)
-      if(!push(item)) break;
+    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
+      _used = other.used();
+      if(buffer_size < _used) _used = buffer_size;
+
+      memcpy(buffer, &*other.begin(), _used * sizeof(T));
+    } else {
+      for(const auto& item : other)
+        if(!push(item)) break;
+    }
 
     return *this;
   }
@@ -100,8 +103,15 @@ public:
 
     if(_used) reset();
 
-    for(const auto& item : other)
-      if(!push(item)) break;
+    if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
+      _used = other.size();
+      if(buffer_size < _used) _used = buffer_size;
+
+      memcpy(buffer, &*other.begin(), _used * sizeof(T));
+    } else {
+      for(const auto& item : other)
+        if(!push(item)) break;
+    }
 
     return *this;
   }
@@ -157,14 +167,14 @@ public:
 
   template <typename U>
   T& replace(const size_t pos, U&& item) {
-    buffer[pos] = item;
+    buffer[pos] = std::forward<U>(item);
 
     return buffer[pos];
   }
 
   template <typename U>
   T& replace(iterator pos, U&& item) {
-    return replace(&*pos - buffer, item);
+    return replace(&*pos - buffer, std::forward<U>(item));
   }
 
   template <typename... Args>
@@ -210,8 +220,10 @@ public:
     for(size_t i = 0; i < count; i++) {
       if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
         memcpy(&buffer[position + i], &item, sizeof(T));
-      else
+      else if(i == count - 1)
         new (&buffer[position + i]) T(std::forward<U>(item)); 
+      else
+        new (&buffer[position + i]) T(item); 
     }
 
     _used += count;
@@ -221,20 +233,20 @@ public:
 
   template <typename U>
   T* insert(size_t position, U&& item) {
-    return insert(position, 1, item);
+    return insert(position, 1, std::forward<U>(item));
   }
 
   template <typename U>
   T* insert(iterator pos, const size_t count, U&& item) {
-    return insert(&*pos - buffer, count, item);
+    return insert(&*pos - buffer, count, std::forward<U>(item));
   }
 
   template <typename U>
   T* insert(iterator pos, U&& item) {
-    return insert(pos, 1, item);
+    return insert(pos, 1, std::forward<U>(item));
   }
 
-  T* insert(size_t position, const std::initializer_list<T> list) {
+  T* insert(size_t position, const std::initializer_list<T>& list) {
     size_t count = list.size();
 
     if(!count || _used + count > buffer_size || position > _used || position == buffer_size)
@@ -247,7 +259,7 @@ public:
     } else {
       size_t i = 0;
       for(const auto& it : list) {
-        new (&buffer[position + i]) T(std::move(it)); 
+        new (&buffer[position + i]) T(it); 
 
         i++;
       }
@@ -258,7 +270,7 @@ public:
     return &buffer[position];
   }
 
-  T* insert(iterator pos, const std::initializer_list<T> list) {
+  T* insert(iterator pos, const std::initializer_list<T>& list) {
     return insert(&*pos - buffer, list);
   }
 
@@ -389,8 +401,8 @@ public:
     this->buffer_size = N;
   }
 
-  vector_fixed(const std::initializer_list<T> list) : vector_fixed() {
-    this->operator=(&list);
+  vector_fixed(const std::initializer_list<T>& list) : vector_fixed() {
+    this->operator=(list);
   }
 
   #ifndef APC_VECTOR_STD_VECTORS_DISABLE
@@ -417,7 +429,7 @@ protected:
     this->_used = 0;
   }
 
-  void maybe_grow(const size_t& count) {
+  void maybe_grow(size_t count) {
     if(!this->buffer_size) {
       this->init(count);
 
@@ -446,16 +458,16 @@ public:
     init(size);
   }
 
-  vector(const std::initializer_list<T> list) :
+  vector(const std::initializer_list<T>& list) :
     vector(list.size())
   {
-    this->operator=(&list);
+    this->operator=(list);
   }
 
-  vector(const size_t size, const std::initializer_list<T> list) :
+  vector(const size_t size, const std::initializer_list<T>& list) :
     vector(size)
   {
-    this->operator=(&list);
+    this->operator=(list);
   }
 
   #ifndef APC_VECTOR_STD_VECTORS_DISABLE
@@ -472,8 +484,6 @@ public:
   }
   #endif
 
-  // Move constructor.
-  // (Can only move SArray, not SArrayFixed)
   vector(vector<T>&& other) : vector() {
     #ifdef ARENA_POOL_CPP
     if(other.arena()) _arena = other.arena();
@@ -486,14 +496,13 @@ public:
     other.moved_reset();
   }
 
-  vector(const vector<T>& other) :
-    vector(*other._arena, other.buffer_size)
+  vector(const vector<T>& other) : vector()
   {
     this->operator=(other);
   }
 
   vector(const ivector<T>& other) :
-    vector(other.size())
+    vector(other.used())
   {
     this->operator=(other);
   }
@@ -509,10 +518,10 @@ public:
     init(__arena, size);
   }
 
-  vector(apc::arena& __arena, const size_t size, const std::initializer_list<T> list) :
+  vector(apc::arena& __arena, const size_t size, const std::initializer_list<T>& list) :
     vector(__arena, size) 
   {
-    this->operator=(&list);
+    this->operator=(list);
   }
 
   vector(apc::arena& __arena, const size_t size, const std::vector<T>& other) :
@@ -529,6 +538,10 @@ public:
   #endif
 
   ~vector() {
+    destroy();
+  }
+
+  void destroy() {
     if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
       for(size_t i = 0; i < this->_used; i++)
         this->buffer[i].~T();
@@ -541,30 +554,48 @@ public:
         this->buffer_size
     )
       free(this->buffer);
+
+    this->_arena = nullptr;
+    this->buffer = nullptr;
+    this->buffer_size = 0;
+    this->_used = 0;
   }
 
-  vector& operator=(const vector& other) {
+  vector& operator=(const vector<T>& other) {
+    this->reset();
     maybe_grow(other.used());
     ivector<T>::operator=(other);
 
     return *this;
   }
 
-  vector& operator=(const std::initializer_list<T> list) {
+  vector& operator=(vector<T>&& other) {
+    destroy();
+    maybe_grow(other.used());
+
+    #ifdef ARENA_POOL_CPP
+    if(other.arena()) _arena = other.arena();
+    #endif
+
+    this->buffer = other.buffer;
+    this->_used = other._used;
+    this->buffer_size = other.buffer_size;
+
+    other.moved_reset();
+
+    return *this;
+  }
+
+  vector& operator=(const std::initializer_list<T>& list) {
+    this->reset();
     maybe_grow(list.size());
     ivector<T>::operator=(list);
 
     return *this;
   }
 
-  vector& operator=(const std::initializer_list<T>* list) {
-    maybe_grow(list->size());
-    ivector<T>::operator=(list);
-
-    return *this;
-  }
-
   vector& operator=(const ivector<T>& other) {
+    this->reset();
     maybe_grow(other.used());
     ivector<T>::operator=(other);
 
@@ -573,6 +604,7 @@ public:
 
   #ifndef APC_VECTOR_STD_VECTORS_DISABLE
   vector& operator=(const std::vector<T>& other) {
+    this->reset();
     maybe_grow(other.size());
     ivector<T>::operator=(other);
 
@@ -583,30 +615,30 @@ public:
   template <typename U>
   T* insert(size_t position, const size_t count, U&& item) {
     maybe_grow(count);
-    return ivector<T>::insert(position, count, item);
+    return ivector<T>::insert(position, count, std::forward<U>(item));
   }
 
   template <typename U>
   T* insert(size_t position, U&& item) {
-    return insert(position, 1, item);
+    return insert(position, 1, std::forward<U>(item));
   }
 
   template <typename U>
   T* insert(vector::iterator pos, const size_t count, U&& item) {
-    return insert(&*pos - this->buffer, count, item);
+    return insert(&*pos - this->buffer, count, std::forward<U>(item));
   }
 
   template <typename U>
   T* insert(vector::iterator pos, U&& item) {
-    return insert(pos, 1, item);
+    return insert(pos, 1, std::forward<U>(item));
   }
 
-  T* insert(size_t position, const std::initializer_list<T> list) {
+  T* insert(size_t position, const std::initializer_list<T>& list) {
     maybe_grow(list.size());
     return ivector<T>::insert(position, list);
   }
 
-  T* insert(vector::iterator pos, const std::initializer_list<T> list) {
+  T* insert(vector::iterator pos, const std::initializer_list<T>& list) {
     return insert(&*pos - this->buffer, list);
   }
 
@@ -624,7 +656,7 @@ public:
   template <typename U>
   T* push(U&& item) {
     maybe_grow(1);
-    return ivector<T>::push(item);
+    return ivector<T>::push(std::forward<T>(item));
   }
 
   template <typename... Args>
