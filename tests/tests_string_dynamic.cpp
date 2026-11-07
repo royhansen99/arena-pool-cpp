@@ -324,7 +324,7 @@ int main() {
 
     apc::str second(std::move(first));
 
-    assert(first.used() == 0 && first == "" && second.used() == 24 &&
+    assert(first.used() == 0 && first == "" && second.used() == 12 &&
       second == "Hello world!");
   }
 }

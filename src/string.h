@@ -96,12 +96,12 @@ namespace apc {
 #define STRING_COMMON_METHODS(A) \
   template <size_t S> \
   A& insert(const size_t pos, const str_fixed<S>& other, const size_t sub_pos, const size_t len) { \
-    return insert(pos, other.c_str(), sub_pos, len); \
+    return insert(pos, other.c_str(), other.used(), sub_pos, len); \
   } \
   \
   template <size_t S> \
   A& insert(const size_t pos, const str_dynamic<S>& other, const size_t sub_pos, const size_t len) { \
-    return insert(pos, other.c_str(), sub_pos, len); \
+    return insert(pos, other.c_str(), other.used(), sub_pos, len); \
   } \
   \
   A& insert(const size_t pos, const char* other, const size_t len = npos) { \
@@ -110,12 +110,12 @@ namespace apc {
   \
   template <size_t S> \
   A& insert(const size_t pos, const str_fixed<S>& other, const size_t len = npos) { \
-    return insert(pos, other.c_str(), 0, len); \
+    return insert(pos, other.c_str(), other.used(), 0, len); \
   } \
   \
   template <size_t S> \
   A& insert(const size_t pos, const str_dynamic<S>& other, const size_t len = npos) { \
-    return insert(pos, other.c_str(), 0, len); \
+    return insert(pos, other.c_str(), other.used(), 0, len); \
   } \
   A& append(const char* other, const size_t len = npos) { \
     return insert(_used, other, len); \
@@ -123,12 +123,12 @@ namespace apc {
   \
   template <size_t S> \
   A& append(const str_fixed<S>& other, const size_t len = npos) { \
-    return append(other.c_str(), len); \
+    return insert(_used, other.c_str(), other.used(), 0, len); \
   } \
   \
   template <size_t S> \
   A& append(const str_dynamic<S>& other, const size_t len = npos) { \
-    return append(other.c_str(), len); \
+    return insert(_used, other.c_str(), other.used(), 0, len); \
   } \
   \
   A& erase(const size_t pos, size_t len = npos) { \
@@ -158,6 +158,15 @@ namespace apc {
     return erase(start, end()); \
   } \
   \
+  private: \
+  A& replace(const size_t pos, size_t len, const char* s, const size_t s_len, const size_t subpos, const size_t sublen) { \
+    if(pos >= _used) return *this; \
+    erase(pos, len); \
+    insert(pos, s, s_len, subpos, sublen); \
+    return *this; \
+  } \
+  \
+  public: \
   A& replace(const size_t pos, size_t len, const char* s, const size_t subpos, const size_t sublen = npos) { \
     if(pos >= _used) return *this; \
     erase(pos, len); \
@@ -171,22 +180,22 @@ namespace apc {
   \
   template <size_t S> \
   A& replace(const size_t pos, size_t len, const str_fixed<S>& other, const size_t subpos, const size_t sublen = npos) { \
-    return replace(pos, len, other.c_str(), subpos, sublen); \
+    return replace(pos, len, other.c_str(), other.used(), subpos, sublen); \
   } \
   \
   template <size_t S> \
   A& replace(const size_t pos, size_t len, const str_fixed<S>& other) { \
-    return replace(pos, len, other.c_str(), 0, npos); \
+    return replace(pos, len, other.c_str(), other.used(), 0, npos); \
   } \
   \
   template <size_t S> \
   A& replace(const size_t pos, size_t len, const str_dynamic<S>& other, const size_t subpos, const size_t sublen = npos) { \
-    return replace(pos, len, other.c_str(), subpos, sublen); \
+    return replace(pos, len, other.c_str(), other.used(), subpos, sublen); \
   } \
   \
   template <size_t S> \
   A& replace(const size_t pos, size_t len, const str_dynamic<S>& other) { \
-    return replace(pos, len, other.c_str(), 0, npos); \
+    return replace(pos, len, other.c_str(), other.used(), 0, npos); \
   } \
   \
   A& trim() { \
@@ -253,29 +262,33 @@ namespace apc {
   size_t find(const str_dynamic<S>& other, size_t pos = 0) { \
     return find(other.c_str(), pos); \
   } \
-  size_t rfind(const char* other, size_t other_pos = 0) { \
-    const size_t length = strlen(other); \
-    if(!length || other_pos > length - 1 || length >= _used) return npos; \
-    size_t pos = _used - length; \
+  private: \
+  size_t rfind(const char* other, size_t other_length, size_t other_pos) { \
+    if(!other_length || other_pos > other_length - 1 || other_length >= _used) return npos; \
+    size_t pos = _used - other_length; \
     while(pos >= 0) { \
       char* search = strstr(&buffer[pos], &other[other_pos]); \
       if(search) return search - buffer; \
       if(pos == 0) break; \
       \
-      if(length > pos) pos = 0;\
-      else pos -= length; \
+      if(other_length > pos) pos = 0;\
+      else pos -= other_length; \
     } \
     return npos; \
+  } \
+  public: \
+  size_t rfind(const char* other, size_t other_pos = 0) { \
+    return rfind(other, strlen(other), other_pos); \
   } \
   \
   template <size_t S> \
   size_t rfind(const str_fixed<S>& other, size_t other_pos = 0) { \
-    return rfind(other.c_str(), other_pos); \
+    return rfind(other.c_str(), other.used(), other_pos); \
   } \
   \
   template <size_t S> \
   size_t rfind(const str_dynamic<S>& other, size_t other_pos = 0) { \
-    return rfind(other.c_str(), other_pos); \
+    return rfind(other.c_str(), other.used(), other_pos); \
   } \
   \
   int compare(const char* other) const { \
@@ -373,42 +386,13 @@ class str_fixed {
   char buffer[N + 1];
   size_t _used;
 
-public:
-  static const std::size_t npos = static_cast<std::size_t>(-1);
-
-  STRING_COMMON_ITERATOR(str_fixed)
-
-  str_fixed() : _used(0) {
-    buffer[0] = '\0';
-  }
-
-  str_fixed(const char* other) : str_fixed() {
-    operator=(other);
-  }
-
-  template <size_t S>
-  str_fixed(const str_fixed<S>& other) : str_fixed(other.c_str()) { }
-
-  template <size_t S>
-  str_fixed(const str_dynamic<S>& other) : str_fixed(other.c_str()) { }
-
-  str_fixed& operator=(const char* other) {
-    size_t len = strlen(other);
-    if(len > N) len = N;
-    memcpy(buffer, other, len < N ? len : N); 
-    buffer[len] = '\0';
-    _used = len;
-
-    return *this;
-  }
-
-  str_fixed& insert(const size_t pos, const char* other, const size_t sub_pos, const size_t len) {
+  str_fixed& insert(const size_t pos, const char* other, const size_t other_len, const size_t sub_pos, const size_t len) {
     size_t available = N - _used;
 
-    if(!len || !available || pos > _used) return *this;
+    if(!len || !available || pos > _used || sub_pos >= other_len) return *this;
 
     const char* other_ptr = &(other[sub_pos]);
-    size_t length = strlen(other_ptr);
+    size_t length = other_len - sub_pos;
 
     if(!length) return *this;
 
@@ -439,6 +423,39 @@ public:
     buffer[_used] = '\0';
 
     return *this;
+  }
+public:
+  static const std::size_t npos = static_cast<std::size_t>(-1);
+
+  STRING_COMMON_ITERATOR(str_fixed)
+
+  str_fixed() : _used(0) {
+    buffer[0] = '\0';
+  }
+
+  str_fixed(const char* other, size_t len) : str_fixed() {
+    append(other, len);
+  }
+
+  str_fixed(const char* other) : str_fixed() {
+    append(other, strlen(other));
+  }
+
+  template <size_t S>
+  str_fixed(const str_fixed<S>& other) : str_fixed(other.c_str(), other.used()) { }
+
+  template <size_t S>
+  str_fixed(const str_dynamic<S>& other) : str_fixed(other.c_str(), other.used()) { }
+
+  str_fixed& operator=(const char* other) {
+    _used = 0;
+    buffer[0] = '\0';
+  
+    return append(other, strlen(other));
+  }
+
+  str_fixed& insert(const size_t pos, const char* other, const size_t sub_pos, const size_t len) {
+    return insert(pos, other, strlen(other), sub_pos, len);
   }
 
   str_fixed substr(const size_t pos = 0, const size_t len = npos) const {
@@ -503,98 +520,11 @@ class str_dynamic {
     _used = 0;
   }
 
-public:
-  static const std::size_t npos = static_cast<std::size_t>(-1);
-
-  STRING_COMMON_ITERATOR(str_dynamic)
-
-  str_dynamic(size_t size = N) :
-    #ifdef ARENA_POOL_CPP
-    _arena(nullptr),
-    #endif
-    buffer(static_buffer),
-    _used(0),
-    static_buffer{'\0'},
-    _size(N)
-  {
-    maybe_grow(size, true);
-  }
-
-  str_dynamic(const str_dynamic& other) :
-    str_dynamic(other.buffer, other._size) { }
-
-  // Move constructor
-  // (str_dynamic only)
-  str_dynamic(str_dynamic&& other) : str_dynamic()
-  {
-    #ifdef ARENA_POOL_CPP
-    if(other._arena) _arena = other._arena;
-    #endif
-    
-    if(other.buffer == other.static_buffer &&
-      other._size
-    )
-      strncpy(buffer, other.buffer, other._size);
-    else
-      buffer = other.buffer;
-
-    _size = other._size;
-    _used = other._used;
-    other.moved_reset();
-  }
-
-  str_dynamic(const char* other, const size_t size = N) : str_dynamic(size)
-  {
-    operator=(other);
-  }
-
-  template <size_t S>
-  str_dynamic(const str_dynamic<S>& other, const size_t size = N) :
-    str_dynamic(other.c_str(), size) { }
-
-  template <size_t S>
-  str_dynamic(const str_fixed<S>& other, const size_t size = N) :
-    str_dynamic(other.c_str(), size) { }
-
-  #ifdef ARENA_POOL_CPP
-  str_dynamic(apc::arena& arena, size_t size = N) :
-    _arena(&arena),
-    buffer(static_buffer),
-    _used(0),
-    static_buffer{'\0'},
-    _size(N)
-  {
-    maybe_grow(size, true);
-  }
-
-  str_dynamic(apc::arena& arena, const char* other, const size_t size = N) :
-    str_dynamic(arena, size)
-  {
-    append(other);
-  }
-
-  template <size_t S>
-  str_dynamic(apc::arena& arena, const str_dynamic<S>& other, const size_t size = N) : str_dynamic(arena, other.c_str(), size) { }
-
-  template <size_t S>
-  str_dynamic(apc::arena& arena, const str_fixed<S>& other, const size_t size = N) : str_dynamic(arena, other.c_str(), size) { }
-
-  #endif
-
-  ~str_dynamic() {
-    if(
-      #ifdef ARENA_POOL_CPP
-      _arena == nullptr &&
-      #endif
-      buffer != static_buffer
-    ) free(buffer);
-  }
-
-  str_dynamic& insert(const size_t pos, const char* other, const size_t sub_pos, const size_t len) {
+  str_dynamic& insert(const size_t pos, const char* other, const size_t other_len, const size_t sub_pos, const size_t len) {
     if(!len || pos > _used) return *this;
 
     const char* other_ptr = &(other[sub_pos]);
-    size_t length = strlen(other_ptr);
+    size_t length = other_len - sub_pos;
     const bool is_self = other == buffer;
 
     if(!length) return *this;
@@ -627,6 +557,108 @@ public:
     buffer[_used] = '\0';
 
     return *this;
+  }
+public:
+  static const std::size_t npos = static_cast<std::size_t>(-1);
+
+  STRING_COMMON_ITERATOR(str_dynamic)
+
+  str_dynamic(size_t size = N) :
+    #ifdef ARENA_POOL_CPP
+    _arena(nullptr),
+    #endif
+    buffer(static_buffer),
+    _used(0),
+    static_buffer{'\0'},
+    _size(N)
+  {
+    maybe_grow(size, true);
+  }
+
+  template <size_t S>
+  str_dynamic(const str_dynamic<S>& other) : str_dynamic() {
+    append(other);
+  }
+
+  template <size_t S>
+  str_dynamic(str_dynamic<S>&& other) : str_dynamic()
+  {
+    #ifdef ARENA_POOL_CPP
+    if(other._arena) _arena = other._arena;
+    #endif
+
+    if(!other._used) return;
+    
+    if(other.buffer == other.static_buffer) {
+      append(other);
+    } else {
+      buffer = other.buffer;
+      _size = other._size;
+      _used = other._used;
+    }
+
+    other.moved_reset();
+  }
+
+  str_dynamic(const char* other, const size_t size = N) : str_dynamic(size)
+  {
+    operator=(other);
+  }
+
+  template <size_t S>
+  str_dynamic(const str_dynamic<S>& other, const size_t size = N) : str_dynamic(size) {
+    append(other);
+  }
+
+  template <size_t S>
+  str_dynamic(const str_fixed<S>& other, const size_t size = N) : str_dynamic(size) {
+    append(other);
+  }
+
+  #ifdef ARENA_POOL_CPP
+  str_dynamic(apc::arena& arena, size_t size = N) :
+    _arena(&arena),
+    buffer(static_buffer),
+    _used(0),
+    static_buffer{'\0'},
+    _size(N)
+  {
+    maybe_grow(size, true);
+  }
+
+  str_dynamic(apc::arena& arena, const char* other, const size_t size = N) :
+    str_dynamic(arena, size)
+  {
+    append(other);
+  }
+
+  template <size_t S>
+  str_dynamic(apc::arena& arena, const str_dynamic<S>& other, const size_t size = N) :
+    str_dynamic(arena, size)
+  {
+    append(other);
+  }
+
+  template <size_t S>
+  str_dynamic(apc::arena& arena, const str_fixed<S>& other, const size_t size = N) :
+    str_dynamic(arena, size)
+  {
+    append(other);
+  }
+
+  #endif
+
+  ~str_dynamic() {
+    if(
+      #ifdef ARENA_POOL_CPP
+      _arena == nullptr &&
+      #endif
+      buffer != static_buffer
+    ) free(buffer);
+  }
+
+  str_dynamic& insert(const size_t pos, const char* other, const size_t sub_pos, const size_t len) {
+    return insert(pos, other, strlen(other), sub_pos, len);
   }
 
   str_dynamic& resize(const size_t size) {
