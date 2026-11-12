@@ -430,6 +430,10 @@ class str_fixed {
 
     return *this;
   }
+
+  str_fixed(const char* other, size_t len) : str_fixed() {
+    append(other, len);
+  }
 public:
   static const std::size_t npos = static_cast<std::size_t>(-1);
 
@@ -437,10 +441,6 @@ public:
 
   str_fixed() : _used(0) {
     buffer[0] = '\0';
-  }
-
-  str_fixed(const char* other, size_t len) : str_fixed() {
-    append(other, len);
   }
 
   str_fixed(const char* other) : str_fixed() {
