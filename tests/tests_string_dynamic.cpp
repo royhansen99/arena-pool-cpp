@@ -317,14 +317,31 @@ int main() {
   }
 
   // ------------------------------------------------------------------
-  // Move 
+  // Move semantics 
   // ------------------------------------------------------------------
   {
-    apc::str first = "Hello world!";
+    char test[] = "A very long heap string here! A very long heap string here!";
+    apc::str first = test;
+
+    auto *first_ptr = first.c_str();
+    auto first_used = first.used();
+
+    assert(first.used() == 59 && first == test);
 
     apc::str second(std::move(first));
 
-    assert(first.used() == 0 && first == "" && second.used() == 12 &&
-      second == "Hello world!");
+    assert(first.used() == 0 && first == "" && second.used() == 59 &&
+      second == test && first_ptr == second.c_str() &&
+      first_used == second.used());
+
+    auto *second_ptr = second.c_str();
+    auto second_used = second.used();
+
+    apc::str third;
+    third = std::move(second);
+
+    assert(second.used() == 0 && second == "" && third.used() == 59 &&
+      third == test && second_ptr == third.c_str() &&
+      second_used == third.used());
   }
 }

@@ -306,17 +306,23 @@ namespace apc {
   } \
   \
   A& operator=(const A& other) { \
-    return operator=(other.c_str()); \
+    _used = 0; \
+    buffer[0] = '\0'; \
+    return append(other); \
   } \
   \
   template <size_t S> \
   A& operator=(const str_fixed<S>& other) { \
-    return operator=(other.c_str()); \
+    _used = 0; \
+    buffer[0] = '\0'; \
+    return append(other); \
   } \
   \
   template <size_t S> \
   A& operator=(const str_dynamic<S>& other) { \
-    return operator=(other.c_str()); \
+    _used = 0; \
+    buffer[0] = '\0'; \
+    return append(other); \
   } \
   \
   A& operator+=(const char* other) { \
@@ -325,11 +331,11 @@ namespace apc {
   \
   template <size_t S> \
   A& operator+=(const str_fixed<S>& other) { \
-    return append(other.c_str()); \
+    return append(other); \
   } \
   template <size_t S> \
   A& operator+=(const str_dynamic<S>& other) { \
-    return append(other.c_str()); \
+    return append(other); \
   } \
   \
   bool operator==(const char* other) const { \
@@ -496,6 +502,24 @@ class str_dynamic {
   char static_buffer[N + 1];
   size_t _size;
 
+  void free_resources() {
+    if(
+      #ifdef ARENA_POOL_CPP
+      _arena == nullptr &&
+      #endif
+      buffer != static_buffer
+    ) free(buffer);
+
+    #ifdef ARENA_POOL_CPP
+    _arena = nullptr;
+    #endif
+
+    buffer = static_buffer;
+    buffer[0] = '\0';
+    _used = 0;
+    _size = N;
+  }
+
   void maybe_grow(const size_t size, const bool init) {
     if(!size) return;
 
@@ -513,7 +537,7 @@ class str_dynamic {
     resize(new_size);
   }
 
-  void moved_reset() {
+  void destroy() {
     buffer = static_buffer;
     static_buffer[0] = '\0';
     _size = N;
@@ -587,17 +611,21 @@ public:
     if(other._arena) _arena = other._arena;
     #endif
 
-    if(!other._used) return;
-    
     if(other.buffer == other.static_buffer) {
-      append(other);
+      if(other._used) {
+        if(other._used <= N) 
+          memcpy(static_buffer, other.static_buffer, other._used + 1);
+        else
+          append(other);
+      }
     } else {
       buffer = other.buffer;
       _size = other._size;
-      _used = other._used;
     }
 
-    other.moved_reset();
+    _used = other._used;
+
+    other.destroy();
   }
 
   str_dynamic(const char* other, const size_t size = N) : str_dynamic(size)
@@ -649,12 +677,7 @@ public:
   #endif
 
   ~str_dynamic() {
-    if(
-      #ifdef ARENA_POOL_CPP
-      _arena == nullptr &&
-      #endif
-      buffer != static_buffer
-    ) free(buffer);
+    free_resources();
   }
 
   str_dynamic& insert(const size_t pos, const char* other, const size_t sub_pos, const size_t len) {
@@ -731,6 +754,32 @@ public:
     buffer[0] = '\0';
 
     return append(other);
+  }
+
+  str_dynamic& operator=(str_dynamic<N>&& other) {
+    free_resources();
+
+    #ifdef ARENA_POOL_CPP
+    if(other._arena) _arena = other._arena;
+    #endif
+
+    if(other.buffer == other.static_buffer) {
+      if(other._used) {
+        if(other._used <= N) 
+          memcpy(static_buffer, other.static_buffer, other._used + 1);
+        else
+          append(other);
+      }
+    } else {
+      buffer = other.buffer;
+      _size = other._size;
+    }
+
+    _used = other._used;
+
+    other.destroy();
+
+    return *this;
   }
 
   str_dynamic substr(const size_t pos = 0, const size_t len = npos) const {
