@@ -303,4 +303,56 @@ int main() {
 
     assert(pool.used() == 2);
   }
+
+
+  // ------------------------------------------------------------------
+  // Move semantics 
+  // ------------------------------------------------------------------
+  {
+    apc::pool<int> first;
+
+    first.allocate(1);
+    first.allocate(2);
+    first.allocate(3);
+    auto* last = first.allocate(4);
+
+    apc::pool<int> second(std::move(first));
+
+    assert(first.used() == 0 && second.used() == 4 &&
+      &*second.rbegin() == last && *last == 4);
+
+    apc::pool<int> third;
+    third = std::move(second);
+
+    assert(second.used() == 0 && third.used() == 4 &&
+      &*third.rbegin() == last && *last == 4);
+  }
+
+  // ------------------------------------------------------------------
+  // Copy semantics 
+  // ------------------------------------------------------------------
+  {
+    apc::pool<int> first;
+
+    for(auto& i : {1,2,3})
+      first.allocate(i);
+
+    apc::pool<int> second;
+    second = first;
+
+    assert(second.used() == 3 && *second.begin() == 1 &&
+      *second.rbegin() == 3);
+
+    apc::pool_fixed<int, 5> third;
+    third = second;
+
+    assert(third.used() == 3 && *third.begin() == 1 &&
+      *third.rbegin() == 3);
+
+    first.reset();
+    first = third;
+
+    assert(first.used() == 3 && *first.begin() == 1 &&
+      *first.rbegin() == 3);
+  }
 }

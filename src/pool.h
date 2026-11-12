@@ -38,7 +38,11 @@ struct pool_page_fixed {
   size_t size = S;
 };
 
-#define POOL_CLASS_COMMON \
+
+template <typename T, size_t S, bool FORCE_TRIVIAL_COPY = false>
+class pool_fixed;
+
+#define POOL_CLASS_COMMON(A) \
   private: \
     pool_item<T>* free_ptr = nullptr; \
     pool_item<T>* use_ptr = nullptr; \
@@ -92,6 +96,28 @@ struct pool_page_fixed {
     const iterator rend() const { \
       return iterator(nullptr); \
     } \
+    A& operator=(pool<T, FORCE_TRIVIAL_COPY>& other) { \
+      if(_used) reset(); \
+      \
+      for(auto &i : other) { \
+        if(!allocate(i)) \
+          break; \
+      } \
+      return *this; \
+    } \
+    \
+    template <size_t Z> \
+    A& operator=(pool_fixed<T, Z, FORCE_TRIVIAL_COPY>& other) { \
+      if(_used) reset(); \
+      \
+      for(auto &i : other) { \
+        if(!allocate(i)) \
+          break; \
+      } \
+      \
+      return *this; \
+    } \
+    \
     size_t size() const { \
       size_t total_size = 0; \
       \
@@ -203,6 +229,43 @@ private:
   pool_page<T>* pages = nullptr;
   size_t pages_size = 0;
 
+  void destroy() {
+    #ifdef ARENA_POOL_CPP
+    arena = nullptr;
+    #endif
+
+    pages = nullptr;
+    pages_size = 0;
+
+    free_ptr = nullptr;
+    use_ptr = nullptr;
+    last_ptr = nullptr;
+    _used = 0;
+  }
+
+  void free_resources() {
+    if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
+      while(use_ptr) {
+        use_ptr->value.~T();
+        use_ptr = use_ptr->next;
+      }
+    }
+
+    #ifdef ARENA_POOL_CPP
+    if(!arena) {
+    #endif
+      for(size_t i = 0; i < pages_size; i++) {
+        free(pages[i].buffer);
+      }
+
+      free(pages);
+    #ifdef ARENA_POOL_CPP
+    }
+    #endif
+
+    destroy();
+  }
+
 public:
   T* allocate_raw() {
     if(!free_ptr) {
@@ -224,7 +287,7 @@ public:
     return &chunk->value;
   }
 
-  POOL_CLASS_COMMON
+  POOL_CLASS_COMMON(pool)
 
 public:
   #ifdef ARENA_POOL_CPP
@@ -237,25 +300,36 @@ public:
     if(pool_size) grow(pool_size);
   }
 
+  pool(pool<T>&& other) {
+    pages = other.pages;
+    pages_size = other.pages_size;
+
+    free_ptr = other.free_ptr;
+    use_ptr = other.use_ptr;
+    last_ptr = other.last_ptr;
+    _used = other._used;
+
+    other.destroy();
+  }
+
   ~pool() {
-    if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
-      while(use_ptr) {
-        use_ptr->value.~T();
-        use_ptr = use_ptr->next;
-      }
-    }
+    free_resources();
+  }
 
-    #ifdef ARENA_POOL_CPP
-    if(!arena) {
-    #endif
-      for(size_t i = 0; i < pages_size; i++) {
-        free(pages[i].buffer);
-      }
+  pool& operator=(pool&& other) {
+    free_resources();
 
-      free(pages);
-    #ifdef ARENA_POOL_CPP
-    }
-    #endif
+    pages = other.pages;
+    pages_size = other.pages_size;
+
+    free_ptr = other.free_ptr;
+    use_ptr = other.use_ptr;
+    last_ptr = other.last_ptr;
+    _used = other._used;
+
+    other.destroy();
+
+    return *this;
   }
 
   void init(const size_t pool_size) {
@@ -328,7 +402,7 @@ public:
   }
 };
 
-template <typename T, size_t S, bool FORCE_TRIVIAL_COPY = false>
+template <typename T, size_t S, bool FORCE_TRIVIAL_COPY>
 class pool_fixed {
 private:
   pool_page_fixed<T, S> pages[1];  
@@ -353,7 +427,7 @@ public:
     return &chunk->value;
   }
 
-  POOL_CLASS_COMMON
+  POOL_CLASS_COMMON(pool_fixed)
 
 public:
   pool_fixed() {
