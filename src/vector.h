@@ -422,8 +422,27 @@ class vector final : public ivector<T> {
   apc::arena* _arena;
   #endif
 
-protected:
-  void moved_reset() {
+  void free_resources() {
+    if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
+      for(size_t i = 0; i < this->_used; i++)
+        this->buffer[i].~T();
+    }
+
+    if(
+        #ifdef ARENA_POOL_CPP
+        !_arena &&
+        #endif
+        this->buffer_size
+    )
+      free(this->buffer);
+
+    this->_arena = nullptr;
+    this->buffer = nullptr;
+    this->buffer_size = 0;
+    this->_used = 0;
+  }
+
+  void destroy() {
     this->buffer = nullptr;
     this->buffer_size = 0;
     this->_used = 0;
@@ -493,7 +512,7 @@ public:
     this->_used = other._used;
     this->buffer_size = other.buffer_size;
 
-    other.moved_reset();
+    other.destroy();
   }
 
   vector(const vector<T>& other) : vector()
@@ -538,27 +557,7 @@ public:
   #endif
 
   ~vector() {
-    destroy();
-  }
-
-  void destroy() {
-    if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
-      for(size_t i = 0; i < this->_used; i++)
-        this->buffer[i].~T();
-    }
-
-    if(
-        #ifdef ARENA_POOL_CPP
-        !_arena &&
-        #endif
-        this->buffer_size
-    )
-      free(this->buffer);
-
-    this->_arena = nullptr;
-    this->buffer = nullptr;
-    this->buffer_size = 0;
-    this->_used = 0;
+    free_resources();
   }
 
   vector& operator=(const vector<T>& other) {
@@ -570,7 +569,7 @@ public:
   }
 
   vector& operator=(vector<T>&& other) {
-    destroy();
+    free_resources();
     maybe_grow(other.used());
 
     #ifdef ARENA_POOL_CPP
@@ -581,7 +580,7 @@ public:
     this->_used = other._used;
     this->buffer_size = other.buffer_size;
 
-    other.moved_reset();
+    other.destroy();
 
     return *this;
   }
