@@ -431,5 +431,72 @@ int main() {
     assert(*map.find(15) == 15); 
   }
 
+  { /* Move semantics */
+    apc::treemap<int, int> first;
+
+    for(auto i : {1,2,3,4})
+      first.insert(i, i);
+
+    auto* one = first.find(1);
+    auto* four = first.find(4);
+
+    apc::treemap<int, int> second(std::move(first));
+
+    assert(first.used() == 0 && first.size() == 0 && second.used() == 4 &&
+      second.find(1) == one && second.find(4) == four);
+
+    apc::treemap<int, int> third;
+    third = std::move(second);
+
+    assert(second.used() == 0 && second.size() == 0 && third.used() == 4 &&
+      third.find(1) == one && third.find(4) == four);
+  }
+
+  { /* Copy semantics */
+    apc::treemap<int, int> first;
+
+    for(auto i : {1,2,3,4})
+      first.insert(i, i);
+
+    apc::treemap<int, int> second(first);
+
+    assert(second.used() == 4 && *second.find(1) == 1 &&
+      *second.find(4) == 4);
+
+    apc::treemap<int, int> third;
+    third = second;
+
+    assert(third.used() == 4 && *third.find(1) == 1 &&
+      *third.find(4) == 4);
+
+    apc::treemap_fixed<int, int, 10> fourth = third;
+
+    assert(fourth.used() == 4 && *fourth.find(1) == 1 &&
+      *fourth.find(4) == 4);
+
+    apc::treemap_fixed<int, int, 10> fifth(third);
+
+    assert(fifth.used() == 4 && *fifth.find(1) == 1 &&
+      *fifth.find(4) == 4);
+
+    apc::treemap_fixed<int, int, 10> sixth;
+    sixth = third;
+
+    assert(sixth.used() == 4 && *sixth.find(1) == 1 &&
+      *sixth.find(4) == 4);
+
+    first.reset();
+
+    first = sixth;
+
+    assert(first.used() == 4 && *first.find(1) == 1 &&
+      *first.find(4) == 4);
+
+    apc::treemap<int, int> seventh(sixth);
+
+    assert(seventh.used() == 4 && *seventh.find(1) == 1 &&
+      *seventh.find(4) == 4);
+  }
+
   return 0;
 }

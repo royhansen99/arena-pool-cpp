@@ -47,7 +47,11 @@ struct treemap_page {
   size_t size;
 };
 
-#define APC_TREEMAP_COMMON \
+template <typename T, typename K, typename COMPARE = std::less<K>,
+  bool FORCE_TRIVIAL_COPY = false>
+class treemap;
+
+#define APC_TREEMAP_COMMON(TYPE) \
   private: \
     treemap_node<T, K>* root = nullptr; \
     treemap_node<T, K>* first = nullptr; \
@@ -437,6 +441,50 @@ struct treemap_page {
       return iterator(nullptr); \
     } \
     \
+    template <size_t X> \
+    TYPE(treemap_fixed<T, K, X, COMPARE, FORCE_TRIVIAL_COPY>& other) { \
+      operator=(other); \
+    } \
+    \
+    template <size_t X> \
+    TYPE& operator=(treemap_fixed<T, K, X, COMPARE, FORCE_TRIVIAL_COPY>& other) { \
+      reset(); \
+      \
+      using ItemType = treemap_node<T, K>; \
+      for(auto& i : other) { \
+        auto* item = reinterpret_cast<treemap_node<T, K>*>( \
+          reinterpret_cast<char*>(&i) - \
+          offsetof(ItemType, current) \
+        ); \
+        \
+        if(!insert(item->key, item->current)) \
+          break; \
+      } \
+      \
+      return *this; \
+    } \
+    \
+    TYPE(treemap<T, K, COMPARE, FORCE_TRIVIAL_COPY>& other) { \
+      operator=(other); \
+    } \
+    \
+    TYPE& operator=(treemap<T, K, COMPARE, FORCE_TRIVIAL_COPY>& other) { \
+      reset(); \
+      \
+      using ItemType = treemap_node<T, K>; \
+      for(auto& i : other) { \
+        auto* item = reinterpret_cast<treemap_node<T, K>*>( \
+          reinterpret_cast<char*>(&i) - \
+          offsetof(ItemType, current) \
+        ); \
+        \
+        if(!insert(item->key, item->current)) \
+          break; \
+      } \
+      \
+      return *this; \
+    } \
+    \
     T* insert(K& key, T& item) { \
       auto* z = insert_raw(key); \
       \
@@ -612,15 +660,14 @@ public:
     }
   }
 
-  APC_TREEMAP_COMMON
+  APC_TREEMAP_COMMON(treemap_fixed)
 
 #ifdef APC_TREEMAP_TESTING 
   treemap_node<T, K>* get_root() { return root; }
 #endif
 };
 
-template <typename T, typename K, typename COMPARE = std::less<K>,
-  bool FORCE_TRIVIAL_COPY = false>
+template <typename T, typename K, typename COMPARE, bool FORCE_TRIVIAL_COPY>
 class treemap {
 private:
   #ifdef ARENA_POOL_CPP
@@ -642,18 +689,7 @@ private:
     return item;
   }
 
-public:
-  treemap(const size_t treemap_size = 0) {
-    if(treemap_size) grow(treemap_size);
-  }
-
-  #ifdef ARENA_POOL_CPP
-  treemap(apc::arena& _arena, const size_t treemap_size = 0) : arena(&_arena) {
-    if(treemap_size) grow(treemap_size);
-  }
-  #endif
-
-  ~treemap() {
+  void free_resources() {
     if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
       for(auto it = begin(); it != end(); ++it) {
         (*it).~T();
@@ -671,6 +707,80 @@ public:
     #ifdef ARENA_POOL_CPP
     }
     #endif
+
+    #ifdef ARENA_POOL_CPP
+    arena = nullptr;
+    #endif
+
+    pages = nullptr;
+    pages_size = 0;
+
+    root = nullptr;
+    first = nullptr;
+    last = nullptr;
+
+    free_ptr = nullptr;
+    _used = 0;
+  }
+
+  void destroy() {
+    #ifdef ARENA_POOL_CPP
+    arena = nullptr;
+    #endif
+
+    pages = nullptr;
+    pages_size = 0;
+
+    root = nullptr;
+    first = nullptr;
+    last = nullptr;
+
+    free_ptr = nullptr;
+    _used = 0;
+  }
+
+  void move(treemap&& other) {
+    #ifdef ARENA_POOL_CPP
+    arena = other.arena;
+    #endif
+
+    pages = other.pages;
+    pages_size = other.pages_size;
+
+    root = other.root;
+    first = other.first;
+    last = other.last;
+
+    free_ptr = other.free_ptr;
+    _used = other._used;
+
+    other.destroy();
+  }
+
+public:
+  treemap(const size_t treemap_size = 0) {
+    if(treemap_size) grow(treemap_size);
+  }
+
+  #ifdef ARENA_POOL_CPP
+  treemap(apc::arena& _arena, const size_t treemap_size = 0) : arena(&_arena) {
+    if(treemap_size) grow(treemap_size);
+  }
+  #endif
+
+  treemap(treemap&& other) {
+    move(std::move(other));
+  }
+
+  treemap& operator=(treemap&& other) {
+    free_resources();
+    move(std::move(other));
+
+    return *this;
+  }
+
+  ~treemap() {
+    free_resources();
   }
 
   bool grow(const size_t size) {
@@ -759,7 +869,7 @@ public:
   }
   #endif
 
-  APC_TREEMAP_COMMON
+  APC_TREEMAP_COMMON(treemap)
 
 #ifdef APC_TREEMAP_TESTING 
   treemap_node<T, K>* get_root() { return root; }
