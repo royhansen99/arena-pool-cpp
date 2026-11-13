@@ -73,7 +73,7 @@ int main() {
     for(int i = 20; i < 40; i++)
       map.insert(&i, i);
       
-    assert(map.size() == 32); // size doubled
+    assert(map.size() == 16 + (16 * 2)); // size doubled
   }
 
   // Arean
@@ -200,9 +200,9 @@ int main() {
 
     { // Erase using iterator.
       assert(map.erase(map.rbegin()) &&
-        *map.rbegin() == 3 && map.used() == 3);
+        *map.rbegin() == 3 && map.used() == 4);
       assert(map.erase(map.begin()) &&
-        *map.begin() == 2 && map.used() == 2);
+        *map.begin() == 2 && map.used() == 3);
     }
 
     map.reset();
@@ -233,6 +233,76 @@ int main() {
 
       assert(result == "1,2,3,4");
     }
+  }
+
+  // Move semantics
+  {
+    apc::hashmap<int, sizeof(int)> first;
+
+    for(auto i : {1,2,3})
+      first.insert(&i, i);
+
+    int key_one = 1;
+    auto* item_one = first.find(&key_one);
+    int key_three = 3;
+    auto* item_three = first.find(&key_three);
+
+    apc::hashmap<int, sizeof(int)> second;
+    second = (std::move(first));
+
+    assert(second.used() == 3 && first.used() == 0 && first.size() == 0 &&
+      second.find(&key_one) == item_one &&
+      second.find(&key_three) == item_three &&
+      *item_one == 1 && *item_three == 3);
+
+    apc::hashmap<int, sizeof(int)> third(std::move(second));
+
+    assert(third.used() == 3 && second.used() == 0 && second.size() == 0 &&
+      third.find(&key_one) == item_one &&
+      third.find(&key_three) == item_three);
+  }
+
+  // Copy semantics
+  {
+    apc::hashmap_fixed<int, sizeof(int), 10> first;
+
+    for(auto i : {1,2,3})
+      first.insert(&i, i);
+
+    apc::hashmap_fixed<int, sizeof(int), 10> second(first);
+
+    assert(first.used() == second.used() &&
+      *first.begin() == *second.begin() &&
+      *first.rbegin() == *second.rbegin() &&
+      &*first.begin() != &*second.begin() &&
+      &*first.rbegin() != &*second.rbegin()); 
+
+    apc::hashmap<int, sizeof(int)> third;
+    third = second;
+
+    assert(second.used() == third.used() &&
+      *second.begin() == *third.begin() &&
+      *second.rbegin() == *third.rbegin() &&
+      &*second.begin() != &*third.begin() &&
+      &*second.rbegin() != &*third.rbegin()); 
+
+
+    apc::hashmap_fixed<int, sizeof(int), 10> fourth(third);
+
+    assert(third.used() == fourth.used() &&
+      *third.begin() == *fourth.begin() &&
+      *third.rbegin() == *fourth.rbegin() &&
+      &*third.begin() != &*fourth.begin() &&
+      &*third.rbegin() != &*fourth.rbegin()); 
+
+    apc::hashmap_fixed<int, sizeof(int), 10> fifth;
+    fifth = third;
+
+    assert(third.used() == fifth.used() &&
+      *third.begin() == *fifth.begin() &&
+      *third.rbegin() == *fifth.rbegin() &&
+      &*third.begin() != &*fifth.begin() &&
+      &*third.rbegin() != &*fifth.rbegin()); 
   }
 
   return 0;

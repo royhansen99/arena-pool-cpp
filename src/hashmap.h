@@ -27,7 +27,7 @@ struct hashmap_item {
   hashmap_item<T, S>* next = nullptr;
 };
 
-#define HASHMAP_CLASS_COMMON(ITERATOR) \
+#define HASHMAP_CLASS_COMMON(TYPE, ITERATOR) \
   private: \
   size_t _used = 0; \
   \
@@ -47,7 +47,7 @@ struct hashmap_item {
   public: \
     explicit iterator(const ITERATOR&& begin): \
       it(begin) { } \
- \
+    \
     T& operator*() const { return (*it).current; } \
     \
     bool operator!=(const iterator& other) const { return it != other.it; } \
@@ -66,24 +66,68 @@ struct hashmap_item {
       return *this; \
     } \
   }; \
- \
+  \
   iterator begin() const { \
     return iterator(pool.begin()); \
   } \
- \
+  \
   iterator rbegin() const { \
     return iterator(pool.rbegin()); \
   } \
- \
+  \
   const iterator end() const { \
     return iterator(pool.end()); \
   } \
- \
+  \
   const iterator rend() const { \
     return iterator(pool.rend()); \
   } \
- \
-  size_t size() { return array.size(); } \
+  \
+  template <size_t X, size_t Y> \
+  TYPE(hashmap_fixed<T, X, Y, FORCE_TRIVIAL_COPY>& other) : TYPE() { \
+    operator=(other); \
+  } \
+  \
+  template <size_t X, size_t Y> \
+  TYPE& operator=(hashmap_fixed<T, X, Y, FORCE_TRIVIAL_COPY>& other) { \
+    reset(); \
+    \
+    using ItemType = hashmap_item<T, S>; \
+    for(auto& i : other) { \
+      auto* item = reinterpret_cast<hashmap_item<T, S>*>( \
+        reinterpret_cast<char*>(&i) - \
+        offsetof(ItemType, current) \
+      ); \
+      \
+      if(!insert(item->key, item->current)) \
+        break; \
+    } \
+    return *this; \
+  } \
+  \
+  template <size_t X> \
+  TYPE(hashmap<T, X, FORCE_TRIVIAL_COPY>& other) : TYPE() { \
+    operator=(other); \
+  } \
+  \
+  template <size_t X> \
+  TYPE& operator=(hashmap<T, X, FORCE_TRIVIAL_COPY>& other) { \
+    reset(); \
+    \
+    using ItemType = hashmap_item<T, S>; \
+    for(auto& i : other) { \
+      auto* item = reinterpret_cast<hashmap_item<T, S>*>( \
+        reinterpret_cast<char*>(&i) - \
+        offsetof(ItemType, current) \
+      ); \
+      \
+      if(!insert(item->key, item->current)) \
+        break; \
+    } \
+    return *this; \
+  } \
+  \
+  size_t size() { return pool.size(); } \
   \
   size_t used() { return _used; } \
   \
@@ -121,7 +165,7 @@ struct hashmap_item {
   \
   T* find(void* key) { \
     uint64_t hash = rapidhashNano(key, S); \
-    size_t index = hash % (size() - 1); \
+    size_t index = hash % (array.size() - 1); \
     \
     auto* current = array[index]; \
     \
@@ -136,10 +180,10 @@ struct hashmap_item {
   } \
   \
   bool erase(void* key) { \
-    if(!size()) return false; \
+    if(!_used) return false; \
     \
     uint64_t hash = rapidhashNano(key, S); \
-    size_t index = hash % (size() - 1); \
+    size_t index = hash % (array.size() - 1); \
     \
     hashmap_item<T, S>* prev = nullptr; \
     auto* current = array[index]; \
@@ -176,6 +220,9 @@ struct hashmap_item {
     ); \
   }
 
+template <typename T, size_t S, bool FORCE_TRIVIAL_COPY = false>
+class hashmap;
+
 template <typename T, size_t S, size_t Z, bool FORCE_TRIVIAL_COPY = false>
 class hashmap_fixed {
 private:
@@ -186,7 +233,7 @@ private:
     if(!size()) return nullptr;
 
     uint64_t hash = rapidhashNano(key, S);
-    size_t index = hash % (size() - 1);      
+    size_t index = hash % (array.size() - 1);      
 
     auto** location = &array[index];
     auto* current = *location;
@@ -213,13 +260,13 @@ private:
 
     *location = n;
 
-    if(n->next == nullptr) _used++;
+    _used++;
 
     return &n->current;
   }
 
   using target_iterator = typename apc::pool_fixed<hashmap_item<T, S>, Z>::iterator;
-  HASHMAP_CLASS_COMMON(target_iterator)
+  HASHMAP_CLASS_COMMON(hashmap_fixed, target_iterator)
 
 public:
   hashmap_fixed() {
@@ -227,7 +274,7 @@ public:
   }
 };
 
-template <typename T, size_t S, bool FORCE_TRIVIAL_COPY = false>
+template <typename T, size_t S, bool FORCE_TRIVIAL_COPY>
 class hashmap {
 private:
   #ifdef ARENA_POOL_CPP
@@ -242,7 +289,7 @@ private:
     if(!size()) return nullptr;
 
     uint64_t hash = rapidhashNano(key, S);
-    size_t index = hash % (size() - 1);      
+    size_t index = hash % (array.size() - 1);      
 
     auto** location = &array[index];
     auto* current = *location;
@@ -269,13 +316,13 @@ private:
 
     *location = n;
 
-    if(n->next == nullptr) {
-      _used++;
+    _used++;
 
-      float factor = (float)_used / (float)size();
+    if(n->next == nullptr) {
+      float factor = (float)_used / (float)array.size();
 
       if(factor >= 0.75) {
-        size_t new_size = size() * 2;
+        size_t new_size = array.size() * 2;
 
         array.reset(); // reset array before resize, to prevent copying old pointers, because we dont need them. 
         array.resize(new_size);
@@ -286,11 +333,9 @@ private:
 
         while(pool_item != nullptr) {
           uint64_t hash = rapidhashNano(&pool_item->value.key, S);
-          size_t index = hash % (size() - 1);
+          size_t index = hash % (array.size() - 1);
 
           auto* location = array[index];
-
-          if(location == nullptr) _used++;
 
           pool_item->value.next = location;
 
@@ -305,13 +350,39 @@ private:
   }
 
   using target_iterator = typename apc::pool<hashmap_item<T, S>>::iterator;
-  HASHMAP_CLASS_COMMON(target_iterator)
+  HASHMAP_CLASS_COMMON(hashmap, target_iterator)
 
 public:
   hashmap(size_t size = 0) {
     if(!size) return;
 
     init(size);
+  }
+
+  hashmap(hashmap&& other) {
+    #ifdef ARENA_POOL_CPP
+    if(other._arena) _arena = other._arena;
+    #endif
+
+    array = std::move(other.array);
+    pool = std::move(other.pool);
+    _used = other._used;
+
+    other._used = 0;
+  }
+
+  hashmap& operator=(hashmap&& other) {
+    #ifdef ARENA_POOL_CPP
+    if(other._arena) _arena = other._arena;
+    #endif
+
+    array = std::move(other.array);
+    pool = std::move(other.pool);
+    _used = other._used;
+
+    other._used = 0;
+
+    return *this;
   }
 
   void init(size_t _size = 16) {
