@@ -190,15 +190,12 @@ struct hashmap_item {
     \
     while(current != nullptr) { \
       if(memcmp(current->key, key, S) == 0) { \
-        if(prev != nullptr) { \
+        if(prev != nullptr)\
           prev->next = current->next; \
-        } else { \
+        else \
           array[index] = current->next; \
-          \
-          if(current->next == nullptr) \
-            _used--; \
-        } \
         \
+        _used--; \
         pool.deallocate(current); \
         \
         return true; \

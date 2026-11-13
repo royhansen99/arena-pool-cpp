@@ -200,9 +200,9 @@ int main() {
 
     { // Erase using iterator.
       assert(map.erase(map.rbegin()) &&
-        *map.rbegin() == 3 && map.used() == 4);
+        *map.rbegin() == 3 && map.used() == 3);
       assert(map.erase(map.begin()) &&
-        *map.begin() == 2 && map.used() == 3);
+        *map.begin() == 2 && map.used() == 2);
     }
 
     map.reset();
