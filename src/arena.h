@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <type_traits>
 #include <cstring>
+#include <utility>
 
 #define ARENA_POOL_CPP 1
 
@@ -33,6 +34,29 @@ private:
   arena_page* pages = nullptr;
   size_t pages_size = 0;
 
+  void destroy() {
+    parent = nullptr;
+    pages = nullptr;
+    pages_size = 0;
+  }
+
+  void free_resources() {
+    if(!parent) {
+      for(size_t i = 0; i < pages_size; i++)
+        free(pages[i].target);
+    }
+
+    destroy();
+  }
+
+  void move(arena&& other) {
+    parent = other.parent;
+    pages = other.pages;
+    pages_size = other.pages_size;
+
+    other.destroy();
+  }
+
 public:
   arena(const size_t size) {
     if(size) grow(size);
@@ -42,11 +66,19 @@ public:
     if(size) grow(size);
   }
 
+  arena(arena&& other) {
+    move(std::move(other));
+  }
+
   ~arena() {
-    if(!parent) {
-      for(size_t i = 0; i < pages_size; i++)
-        free(pages[i].target);
-    }
+    free_resources();
+  }
+
+  arena& operator=(arena&& other) {
+    free_resources();
+    move(std::move(other));
+
+    return *this;
   }
 
   template <typename T, typename... Args>

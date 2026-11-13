@@ -223,4 +223,18 @@ int main() {
       arena.size() > (10 + (sizeof(int) * 3) * 2)
     );
   }
+
+  // ------------------------------------------------------------------
+  // Move semantics 
+  // ------------------------------------------------------------------
+  {
+    apc::arena first(512);
+
+    char text[] = "Hello world!";
+    first.allocate(text, sizeof(text));
+
+    apc::arena second(std::move(first));
+
+    assert(first.used() == 0 && second.used() == 13);
+  }
 }
