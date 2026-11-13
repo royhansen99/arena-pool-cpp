@@ -443,6 +443,10 @@ class vector final : public ivector<T> {
   }
 
   void destroy() {
+    #ifdef ARENA_POOL_CPP
+    _arena = nullptr;
+    #endif
+
     this->buffer = nullptr;
     this->buffer_size = 0;
     this->_used = 0;
@@ -503,7 +507,7 @@ public:
   }
   #endif
 
-  vector(vector<T>&& other) : vector() {
+  vector(vector&& other) {
     #ifdef ARENA_POOL_CPP
     if(other.arena()) _arena = other.arena();
     #endif
@@ -560,7 +564,7 @@ public:
     free_resources();
   }
 
-  vector& operator=(const vector<T>& other) {
+  vector& operator=(const vector& other) {
     this->reset();
     maybe_grow(other.used());
     ivector<T>::operator=(other);
@@ -568,9 +572,8 @@ public:
     return *this;
   }
 
-  vector& operator=(vector<T>&& other) {
+  vector& operator=(vector&& other) {
     free_resources();
-    maybe_grow(other.used());
 
     #ifdef ARENA_POOL_CPP
     if(other.arena()) _arena = other.arena();
