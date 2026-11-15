@@ -45,6 +45,8 @@ std::vector/string/.., but not in all cases.
 
 Nested arenas (child-arenas) are supported.
 
+All containers support iterators for convenient for-loop iteration.
+
 In order to get maximum speed you should attempt to make your  
 data-structures trivial-pod, since that makes your data faster  
 to move around and destroy in containers.
@@ -67,31 +69,14 @@ container-usage.
 
 ### Containers overview 
 
-apc::arena
-
-apc::pool<T>  
-apc::pool\_fixed<T, size>
-
-apc::vector<T>  
-apc::vector\_fixed<T, size>
-
-apc::hashmap<T>
-apc::hashmap\_fixed<T, size>  
-(Hashmap keys can even be structs, as long as you zero-out padding)
-
-apc::treemap<T, K>
-apc::treemap\_fixed<T, K, size>  
-(Also supports specifying custom sorting/comparator)
-
-apc::str  
-apc::str\_fixed<size>  
-apc::str4  
-apc::str8  
-apc::str16  
-apc::str32  
-apc::str64  
-apc::str128  
-apc::str256
+| Container | Details |
+| --- | --- |
+|apc::arena|- Bump allocator.<br />- Can be dynamic with automatic growth, or static with a fixed size (e.g stack allocation).|
+|apc::pool<T><br />apc::pool\_fixed<T, size>|- Basically a doubly linked-list.<br />- Stable pointers.|
+|apc::vector<T><br />apc::vector\_fixed<T, size>|- An array/vector container, very similar to std::vector.<br />- Also features static-size vectors which can be stack allocated.|
+|apc::hashmap<T><br />apc::hashmap\_fixed<T, size>|- Uses Rapidhash for hashing keys.<br />- Hashmap keys can even be structs, as long as you zero-out padding.<br />- Stable pointers.<br />- Data is stored in a doubly linked-list, and hash-keys are stored in an array which simply points back to entries in the linked-list.<br />- Automatically resizes/recalculates all keys/array if more than 75% is used.|
+|apc::treemap<T, K><br />apc::treemap\_fixed<T, K, size>|- Red/black binary tree.<br />- Supports specifying custom sorting/comparator.<br />- Stable pointers.<br />- Implemented by following logic in the book "Introduction to Algorithms 4th edition (CLRS)".<br />- Nodes are stored in a doubly linked-list.|
+|apc::str<br />apc::str\_fixed\<size\><br />apc::str4<br />apc::str8<br />apc::str16<br />apc::str32<br />apc::str64<br />apc::str128<br />apc::str256|- String containers, very similar to std::string.<br />- Also features static-size strings which can be stack allocated.|
 
 
 ### Examples
