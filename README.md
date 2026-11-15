@@ -1,183 +1,102 @@
 # arena-pool-cpp
 
-A very fast memory allocator library with an arena/bump-allocator,  
-a pool-allocator, a hashmap-allocator,  and a vector-like  
-array-allocator. Also includes a string implementation.  
-Single header c++11 library.  
+An arena-style bump-allocator with a suite of containers that  
+that can use arenas as the underlying allocator. All containers  
+also feature fixed-size stack or dynamic malloc-allocation,  
+outside of arenas. This library aims to have as little overhead  
+as possible, by avoiding dynamic-dispatch and virtual-lookups.
 
-To avoid virtual lookup overhead, this library does not use  
-abstract-classes/virtual-functions. Because of this we rely on  
-macros. This is a low-level library, so we want maximum speed. 
+It should be much faster than the standard library std::pmr  
+suite of containers, which has virtual-lookup overhead  
+(virtual methods). Benchmarks indicate that it is on-par with  
+the speed of std::vector, when using malloc instead of arenas,  
+and may even be slightly faster than std::vector.  
 
-__apc::arena allocator__  
-Essentially a bump-allocator with a pre-allocated  
-amount of memory reserved up-front only once. As you allocate portions  
-inside the arena-memory it will simply bump a pointer offset.  
-Clearing/resetting the arena will simply set the offset back to 0.  
-As a result of these things, allocations and clearing an arena is extremely  
-fast with zero-overhead. Memory is freed when the class-destructor is called.  
-Nested arenas is also supported!
+Containers supported:
+- Arenas  
+- Strings  
+- Vectors  
+- Pools  
+- Hashmaps  
+- Treemaps
 
-__apc::pool allocator__  
-A contiguous object pool using a combined doubly/singly-linked free/used list.  
-Each PoolItem<T> contains a prev/next pointer and the user object T.  
-Allocation pops from the free list; deallocation pushes to the head.  
-Multiple fixed-size buffers are managed in a growable array of metadata  
-(PoolBuffer<T>). The free list spans all buffers, enabling O(1) operations  
-and full reset/recycling.  
-This allocator works by either using an `Arena`, or by managing it's own  
-memory using malloc/free.  
-If the pool manages it's own memory, free happens when the class-destructor  
-is called.
+All containers are optimized for trivial structures (POD),  
+and will use memcpy and avoid calling destructors when possible.
 
-__apc::hashmap allocator__  
-A hashmap implementation which uses apc::vector for indexes, and apc::pool  
-for storing items/content.   
-Indexes are organized into doubly linked lists, to handle hash collisions  
-when multiple items share the same index.  
-Uses rapidhash for hashing keys.  
-Key types are very flexible because they are void pointers of N size  
-controlled by you, so can even be structs, as long as you make sure padding  
-is zeroed.    
-This allocator also supports apc::arena.
+All containers are RAII-compatible with automatic cleanup and  
+copy/move-semantics.
 
-__apc::vector allocator__  
-Works in much the same way as `std::vector`.  
-Will pre-allocate a specified size, with the ability to shrink/grow.  
-Shrink is a manual operation.  
-This allocator works by either using an `Arena`, or by managing it's own  
-memory using malloc/free.  
+All dynamic containers support paging and will grow  
+automatically, including arenas themselves.  
+Fixed-size stack-containers will not grow beyond their starting  
+size.
 
-__apc::string allocator__  
-Works in much the same was as `std::string`.  
-This allocator also supports apc::arena.  
-Documentation for the string implementation is in a separate file: [STRING.md](STRING.md) 
+Arenas, Hashmaps, Treemaps and Pools will maintain stable  
+pointers as they grow.
 
-### Usage
+In general, all containers will grow by (+ size x 2) when they  
+are full.
 
-Have a look in the "tests/" folder for more usage examples.  
+All containers allow you to manually/forcefully specify that your  
+data-structure is trivially copyable in the template-signature.
 
-Simply drop the single header `Arena.h` file directly in to your project. 
+Container methods are in some cases very similar to  
+std::vector/string/.., but not in all cases.
 
-```cpp
-/* (From ./example.cpp in this repo) */
-#include "../src/arena.h"
-#include "../src/pool.h"
-#include "../src/vector.h"
-#include <iostream>
+Nested arenas (child-arenas) are supported.
 
-struct Foo {
-    char value[20];
-    int number;
-};
+In order to get maximum speed you should attempt to make your  
+data-structures trivial-pod, since that makes your data faster  
+to move around and destroy in containers.
 
-int main() {
-  // Allocate a 1024 byte arena.
-  apc::arena arena(1024);
+### Motivation 
 
-  arena.size(); // 1024 bytes
+This library was primarily designed as a faster bump-allocator  
+alternative to std::pmr, without virtual-lookup overhead.
 
-  // Allocate a 30-char chunk from the arena.
-  char* str = arena.allocate_size<char>(30);
+The reason to use a bump allocator is that you can malloc a big  
+chunk of memory once, and then simply re-use that chunk for all  
+containers. In-theory all your dynamic memory could be boiled  
+down to a single arena/malloc, which is huge.
 
-  arena.used(); // 30 bytes (of 1024 bytes)
+In addition all containers also feature fixed-size (stack)  
+variations and dynamic-size (malloc) variations.  
+So you can use these containers without using arenas at all, which  
+allows you to simply blanket replace all std-vector/string..  
+container-usage.
 
-  // Allocate a pool of 5 Foo's from the arena.
-  apc::pool<Foo> foo_pool(arena, 5); 
+### Containers overview 
 
-  // You could also create an independent pool
-  // that uses malloc/free instead of an arena,
-  // by only providing a single size argument.
-  // The pool will automatically free memory
-  // when it goes out of scope.
-  // apc::pool<Foo> foo_pool(5); 
+apc::arena
 
-  arena.used(); // 208 bytes (of 1024 bytes)
+apc::pool<T>  
+apc::pool\_fixed<T, size>
 
-  // Allocate some items from the pool.
-  Foo* foo1 = foo_pool.allocate(Foo{"Test1", 1});
-  Foo* foo2 = foo_pool.allocate(Foo{"Test2", 2});
-  Foo* foo3 = foo_pool.allocate(Foo{"Test3", 3});
+apc::vector<T>  
+apc::vector\_fixed<T, size>
 
-  // Deallocate/remove one item.
-  foo_pool.deallocate(foo3);
+apc::hashmap<T>
+apc::hashmap\_fixed<T, size>  
+(Hashmap keys can even be structs, as long as you zero-out padding)
 
-  foo_pool.used(); // 2 x Foo (of 5)
-  foo_pool.size(); // 5
+apc::treemap<T, K>
+apc::treemap\_fixed<T, K, size>  
+(Also supports specifying custom sorting/comparator)
 
-  // Grow the pool by allocating space for 10
-  // additional Foo's from the underlying arena.
-  // This will be added as a separate buffer to
-  // the pool, and is not contigous with the
-  // initial allocation of 5.
-  foo_pool.grow(10);
+apc::str  
+apc::str\_fixed<size>  
+apc::str4  
+apc::str8  
+apc::str16  
+apc::str32  
+apc::str64  
+apc::str128  
+apc::str256
 
-  foo_pool.size(); // 15 
 
-  arena.used(); // 560 bytes (of 1024 bytes)
+### Examples
 
-  // Allocate a 400 byte nested arena.
-  apc::arena child_arena(arena, 400);
-
-  child_arena.size(); // 400 bytes
-  child_arena.used(); // 0 bytes (of 400 bytes)
-  arena.used(); // 960 bytes (of 1024 bytes)
-   
-  // Clear all allocations.
-  // Since this arena also contained `foo_pool`,
-  // `str` and `child_arena`, they are also cleared
-  // by simply resetting the parent arena.
-  // Reset is only useful if you are going to re-use
-  // the arena for new allocations, otherwise you
-  // could simply rely on the automatic free when the
-  // arena goes out of scope.
-  arena.reset(); 
-  arena.used(); // 0 bytes (of 1024 bytes)
-
-  apc::vector<int> array(arena, 3);
-  // Ommit the arena parameter to simply use malloc
-  // instead.
-  // apc::vector<int> array(3);
-
-  array.push(1);
-  array.push(2);
-  array.push(3);
-
-  array.at(0); // 1
-  array[0]; // 1
-  array.at(1); // 2 
-  array[1]; // 2 
-
-  array.pop(); // Remove last item.
-
-  array.erase(0); // Remove item at position 0.
-
-  array.push(400);
-
-  array[0]; // 2 
-  array[1]; // 400
-
-  array.resize(6); // Increase size from 3 to 6.
-
-  // Iteration 
-  for(auto &it : array) {
-    std::cout << "Value: " << it << "\n";
-  }
-
-  // Reverse iteration
-  for (auto it = array.rbegin(); it != array.rend(); ++it) {
-    std::cout << "Value: " << *it << "\n";
-  }
-
-  // When the parent `arena` goes out of scope,
-  // the destructor will free() the allocated
-  // memory.
-  // Since everything in this example is using this
-  // arena, it is all freed when the arena is freed. 
-
-  return 0;
-}
-```
+For usage examples please look at tests in the tests/ folder.
 
 ### Benchmarks
 
