@@ -12,6 +12,8 @@ suite of containers, which has virtual-lookup overhead
 the speed of std::vector, when using malloc instead of arenas,  
 and may even be slightly faster than std::vector.  
 
+This library targets C++11.
+
 Containers supported:
 - Arenas  
 - Strings  
@@ -76,7 +78,7 @@ container-usage.
 |apc::vector<T><br />apc::vector\_fixed<T, size>|- An array/vector container, very similar to std::vector.<br />- Also features static-size vectors which can be stack allocated.|
 |apc::hashmap<T><br />apc::hashmap\_fixed<T, size>|- Uses Rapidhash for hashing keys.<br />- Hashmap keys can even be structs, as long as you zero-out padding.<br />- Stable pointers.<br />- Data is stored in a doubly linked-list, and hash-keys are stored in an array which simply points back to entries in the linked-list.<br />- Automatically resizes/recalculates all keys/array if more than 75% is used.|
 |apc::treemap<T, K><br />apc::treemap\_fixed<T, K, size>|- Red/black binary tree.<br />- Supports specifying custom sorting/comparator.<br />- Stable pointers.<br />- Implemented by following logic in the book "Introduction to Algorithms 4th edition (CLRS)".<br />- Nodes are stored in a doubly linked-list.|
-|apc::str<br />apc::str\_fixed\<size\><br />apc::str4<br />apc::str8<br />apc::str16<br />apc::str32<br />apc::str64<br />apc::str128<br />apc::str256|- String containers, very similar to std::string.<br />- Also features static-size strings which can be stack allocated.|
+|apc::str<br />apc::str\_fixed\<size\><br />apc::str4<br />apc::str8<br />apc::str16<br />apc::str32<br />apc::str64<br />apc::str128<br />apc::str256|- String containers, very similar to std::string.<br />- Also features static-size strings which can be stack allocated.<br />- Has SSO (small-string-optimization), dynamic strings smaller than 32 bytes uses stack.|
 
 
 ### Examples
