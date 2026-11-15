@@ -28,20 +28,37 @@ struct arena_page {
   char* buffer;
 };
 
+template <size_t S>
+struct arena_stack {
+  const size_t size = S;
+  char raw [S + sizeof(arena_page)];
+  char* const buffer = raw + sizeof(arena_page);
+};
+
+struct arena_static {
+  char* raw = nullptr;
+  size_t size = 0;
+
+  arena_static(char* _raw, size_t _size) : raw(_raw), size(_size) {}
+  arena_static(void* _raw, size_t _size) : raw(static_cast<char*>(_raw)), size(_size) {}
+};
+
 class arena {
 private:
+  bool is_static = false;
   arena* parent = nullptr;
   arena_page* pages = nullptr;
   size_t pages_size = 0;
 
   void destroy() {
+    is_static = false;
     parent = nullptr;
     pages = nullptr;
     pages_size = 0;
   }
 
   void free_resources() {
-    if(!parent) {
+    if(!parent && !is_static) {
       for(size_t i = 0; i < pages_size; i++)
         free(pages[i].target);
     }
@@ -50,6 +67,7 @@ private:
   }
 
   void move(arena&& other) {
+    is_static = other.is_static;
     parent = other.parent;
     pages = other.pages;
     pages_size = other.pages_size;
@@ -58,6 +76,27 @@ private:
   }
 
 public:
+  template <size_t Z>
+  arena(arena_stack<Z>& stack) {
+    is_static = true;
+    pages = reinterpret_cast<arena_page*>(stack.raw);
+    pages_size = 1;
+    pages[0] = {stack.size, 0, stack.raw, stack.buffer};
+  }
+
+  arena(arena_static& staticbuf) {
+    is_static = true;
+    size_t page_usage = sizeof(arena_page);
+
+    if(staticbuf.size < page_usage) return;
+
+    pages = reinterpret_cast<arena_page*>(staticbuf.raw);
+    pages_size = 1;
+
+    pages[0] = {staticbuf.size - page_usage, 0, staticbuf.raw,
+      staticbuf.raw + page_usage};
+  }
+
   arena(const size_t size) {
     if(size) grow(size);
   }
@@ -145,6 +184,8 @@ public:
       char* buffer;
 
       if(i == pages_size) {
+        if(is_static) break;
+
         const size_t grow_size = i == 0 ? size + alignment :
           pages[i - 1].size * 2;
 
@@ -172,6 +213,8 @@ public:
   }
 
   bool resize(const size_t size) {
+    if(is_static) return false;
+
     if(!parent) {
       for(size_t i = 0; i < pages_size; i++)
         free(pages[i].target);
@@ -184,6 +227,8 @@ public:
   }
 
   bool grow(const size_t size) {
+    if(is_static) return false;
+
     const size_t new_size = (sizeof(arena_page) * (pages_size + 1)) + size;
     char* new_page;
     
@@ -211,12 +256,17 @@ public:
   }
 
   void reset() {
-    for(size_t i = 0; i < pages_size; i++)
-      pages[i].used = 0;
+    if(pages_size == 1)
+      pages[0].used = 0;
+    else
+      for(size_t i = 0; i < pages_size; i++)
+        pages[i].used = 0;
   }
 
   size_t size() const {
     size_t count = 0;
+
+    if(pages_size == 1) return pages[0].size;
 
     for(size_t i = 0; i < pages_size; i++)
       count += pages[i].size;
@@ -226,6 +276,8 @@ public:
 
   size_t used() const {
     size_t count = 0;
+
+    if(pages_size == 1) return pages[0].used;
 
     for(size_t i = 0; i < pages_size; i++)
       count += pages[i].used;

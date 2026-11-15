@@ -237,4 +237,88 @@ int main() {
 
     assert(first.used() == 0 && second.used() == 13);
   }
+
+  // ------------------------------------------------------------------
+  // Stack arena 
+  // ------------------------------------------------------------------
+  {
+    apc::arena_stack<1024> stack_buffer; 
+    apc::arena arena(stack_buffer);
+
+    {
+      assert(
+        arena.size() == 1024 &&
+        arena.used() == 0
+      );
+
+      int* a = arena.allocate_new<int>(111);
+      int* b = arena.allocate_new<int>(222);
+      int* c = arena.allocate_new<int>(333);
+
+      assert(a && b && c);
+      assert(*a == 111 && *b == 222 && *c == 333);
+
+      arena.reset();
+
+      assert(arena.used() == 0);
+
+      char* name = arena.allocate_size<char>(20);
+      strcpy(name, "John Doe");
+
+      char* country = arena.allocate_size<char>(20);
+      strcpy(country, "England");
+
+      assert(
+        strcmp(country, "England") == 0 &&
+        strcmp(name, "John Doe") == 0 &&
+        arena.used() == sizeof(char) * 40
+      );
+
+      // Not enough space
+      assert(arena.allocate_raw(2000) == nullptr);
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Static arena 
+  // ------------------------------------------------------------------
+  {
+    apc::arena_static staticbuf = {malloc(1024), 1024}; 
+    apc::arena arena(staticbuf);
+
+    {
+      assert(
+        arena.size() == 1024 - sizeof(apc::arena_page) &&
+        arena.used() == 0
+      );
+
+      int* a = arena.allocate_new<int>(111);
+      int* b = arena.allocate_new<int>(222);
+      int* c = arena.allocate_new<int>(333);
+
+      assert(a && b && c);
+      assert(*a == 111 && *b == 222 && *c == 333);
+
+      arena.reset();
+
+      assert(arena.used() == 0);
+
+      char* name = arena.allocate_size<char>(20);
+      strcpy(name, "John Doe");
+
+      char* country = arena.allocate_size<char>(20);
+      strcpy(country, "England");
+
+      assert(
+        strcmp(country, "England") == 0 &&
+        strcmp(name, "John Doe") == 0 &&
+        arena.used() == sizeof(char) * 40
+      );
+
+      // Not enough space
+      assert(arena.allocate_raw(2000) == nullptr);
+    }
+
+    free(staticbuf.raw);
+  }
 }
