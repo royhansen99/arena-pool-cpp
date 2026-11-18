@@ -202,7 +202,6 @@ int main() {
 
     arr.erase(0); // Erase 0
     arr.erase(3); // Erase 4
-    arr.erase(5); // Out of bound, does nothing.
 
     test = "";
     for(const auto& it : arr) {

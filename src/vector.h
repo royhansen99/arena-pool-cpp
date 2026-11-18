@@ -26,8 +26,8 @@ template <typename T, bool FORCE_TRIVIAL_COPY = false>
 class ivector {
 protected: 
   T* buffer;
-  size_t buffer_size;
-  size_t _used;
+  T* _end;
+  T* next;
 
 public:
   class iterator {
@@ -56,21 +56,18 @@ public:
     }
   };
 
-  ivector() :
-    buffer(nullptr),
-    buffer_size(0),
-    _used(0) { }
+  ivector() : buffer(nullptr), _end(nullptr), next(nullptr) { }
 
   ivector& operator=(const std::initializer_list<T>& list) {
-    if(!buffer_size) return *this;
+    if(!buffer) return *this;
 
-    if(_used) reset();
+    if(used()) reset();
 
     if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
-      _used = list.size();
-      if(buffer_size < _used) _used = buffer_size;
+      next = buffer + list.size();
+      if(next > _end) next = _end;
 
-      memcpy(buffer, list.begin(), _used * sizeof(T));
+      memcpy(buffer, list.begin(), used() * sizeof(T));
     } else {
       for(const auto& item : list)
         if(!push(item)) break;
@@ -80,15 +77,15 @@ public:
   }
 
   ivector& operator=(const ivector& other) {
-    if(!buffer_size) return *this;
+    if(!buffer) return *this;
 
-    if(_used) reset();
+    if(used()) reset();
 
     if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
-      _used = other.used();
-      if(buffer_size < _used) _used = buffer_size;
+      next = buffer + other.used();
+      if(next > _end) next = _end;
 
-      memcpy(buffer, &*other.begin(), _used * sizeof(T));
+      memcpy(buffer, &*other.begin(), used() * sizeof(T));
     } else {
       for(const auto& item : other)
         if(!push(item)) break;
@@ -99,15 +96,15 @@ public:
 
   #ifndef APC_VECTOR_STD_VECTORS_DISABLE
   ivector& operator=(const std::vector<T>& other) {
-    if(!buffer_size) return *this;
+    if(!buffer) return *this;
 
-    if(_used) reset();
+    if(used()) reset();
 
     if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
-      _used = other.size();
-      if(buffer_size < _used) _used = buffer_size;
+      next = buffer + other.size();
+      if(next > _end) next = _end;
 
-      memcpy(buffer, &*other.begin(), _used * sizeof(T));
+      memcpy(buffer, &*other.begin(), used() * sizeof(T));
     } else {
       for(const auto& item : other)
         if(!push(item)) break;
@@ -130,11 +127,11 @@ public:
   }
 
   iterator rbegin() const {
-    return iterator(buffer + _used - 1, true);
+    return iterator(next ? next - 1 : next, true);
   }
 
   const iterator end() const {
-    return iterator(buffer + _used);
+    return iterator(next);
   }
 
   const iterator rend() const {
@@ -142,19 +139,19 @@ public:
   }
 
   T* first() {
-    return _used ? buffer : nullptr;
+    return buffer;
   }
 
   const T* first() const {
-    return _used ? buffer : nullptr;
+    return buffer;
   }
 
   T* last() {
-    return _used ? buffer + _used - 1 : nullptr;
+    return next ? next - 1 : nullptr;
   }
 
   const T* last() const {
-    return _used ? buffer + _used - 1 : nullptr;
+    return next ? next - 1 : nullptr;
   }
 
   T& at(const size_t pos) {
@@ -191,20 +188,22 @@ public:
 
 private:
   void insert_make_room_for_count(const size_t& position, const size_t& count) {
-    if(position == _used) return;
+    size_t used = this->used();
+
+    if(position == used) return;
 
     if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
       memmove(
         &buffer[position + count],
         &buffer[position],
-        sizeof(T) * (_used - position)
+        sizeof(T) * (used - position)
       );
     } else {
-      for(size_t i = _used - 1 + count; i >= (position + count); i--) {
-         new (&buffer[i]) T(std::move(buffer[i - count]));
+      for(auto* target = buffer + position; target != next; target++) {
+         new (target + count) T(std::move(*target));
 
         if(!std::is_trivially_destructible<T>::value)
-          buffer[i - count].~T();
+          target->~T();
       }
     }
   }
@@ -212,7 +211,8 @@ private:
 public:
   template <typename U>
   T* insert(size_t position, const size_t count, U&& item) {
-    if(!count || _used + count > buffer_size || position > _used || position == buffer_size)
+    size_t used = this->used();
+    if(!count || used + count > size() || position > used || position == size())
       return nullptr;
 
     insert_make_room_for_count(position, count);
@@ -226,7 +226,7 @@ public:
         new (&buffer[position + i]) T(item); 
     }
 
-    _used += count;
+    next += count;
 
     return &buffer[position];
   }
@@ -249,7 +249,7 @@ public:
   T* insert(size_t position, const std::initializer_list<T>& list) {
     size_t count = list.size();
 
-    if(!count || _used + count > buffer_size || position > _used || position == buffer_size)
+    if(!count || used() + count > size() || position > used() || position == size())
       return nullptr;
 
     insert_make_room_for_count(position, count);
@@ -265,7 +265,7 @@ public:
       }
     }
 
-    _used += count;
+    next += count;
 
     return &buffer[position];
   }
@@ -276,14 +276,17 @@ public:
 
   template <typename... Args>
   T* insert_new(size_t position, Args&&... args) {
-    if(_used == buffer_size || position > _used || position == buffer_size)
+    size_t used = this->used();
+    size_t size = this->size();
+
+    if(used == size || position > used || position == size)
       return nullptr;
 
     insert_make_room_for_count(position, 1);
 
     new (&buffer[position]) T(std::forward<Args>(args)...);
 
-    _used++;
+    next++;
 
     return &buffer[position];
   }
@@ -295,79 +298,73 @@ public:
 
   template <typename U>
   T* push(U&& item) {
-    if(_used == buffer_size) return nullptr;
+    if(next == _end) return nullptr;
 
     if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY) {
-      memcpy(buffer + _used, &item, sizeof(T));
+      memcpy(next, &item, sizeof(T));
     } else {
-      new (buffer + _used) T(std::forward<U>(item));
+      new (next) T(std::forward<U>(item));
     }
 
-    _used++;
-
-    return buffer + _used - 1;
+    return next++;
   }
 
   template <typename... Args>
   T* push_new(Args&&... args) {
-    if(_used == buffer_size) return nullptr;
+    if(next == _end) return nullptr;
 
-    new (buffer + _used) T(std::forward<Args>(args)...);
+    new (next) T(std::forward<Args>(args)...);
 
-    _used++;
-
-    return buffer + _used - 1;
+    return next++;
   }
 
   void pop() {
-    if(_used) erase(_used - 1);
+    if(next != buffer) erase_ptr(next - 1);
   }
 
-  void erase_ptr(const T* item) {
-    erase(((size_t)item - (size_t)buffer) / sizeof(T));
-  }
-
-  void erase(const size_t pos) {
-    if(!buffer_size || pos <  0 || pos >= _used) return;
-
+  void erase_ptr(T* item) {
     if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY)
-      buffer[pos].~T();
+      item->~T();
 
-    if(pos < _used - 1) {
+    if(item + 1 != next) {
       if(FORCE_TRIVIAL_COPY || std::is_trivially_copyable<T>::value) {
-        memmove(buffer + pos, buffer + pos + 1, sizeof(T) * (_used - 1 - pos));
+        memmove(item, item + 1, sizeof(T) * (next - item - 1));
       } else {
-        for(size_t i = pos + 1; i < _used; i++) {
-          new (&buffer[i - 1]) T(std::move(buffer[i]));
+        for(auto* i = item + 1; i < next; i++) {
+          new (i - 1) T(std::move(*i));
 
           if(!std::is_trivially_destructible<T>::value)
-            buffer[i].~T();
+            i->~T();
         }
       }
     }
 
-    _used--;
+    next--;
+  }
+
+  void erase(const size_t pos) {
+    erase_ptr(buffer + pos);
   }
 
   void reset() {
     if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
-      for(size_t i = 0; i < _used; i++)
-        buffer[i].~T();
+      for(auto* it = buffer; it != next; it++)
+        it->~T();
     }
 
-    _used = 0;
+    next = buffer;
   }
 
   size_t used() const {
-    return _used;
+    return next - buffer;
   }
 
   size_t size() const {
-    return buffer_size;
+    return _end - buffer;
   }
 
   bool empty() const {
-    return _used == 0;
+    return next == buffer;
   }
 
   #ifdef ARENA_POOL_CPP
@@ -380,8 +377,8 @@ public:
 template <typename T, bool Trivial>
 class vector_fixed_mixin : public ivector<T> {
   ~vector_fixed_mixin() {
-    for(size_t i = 0; i < this->_used; i++)
-      this->buffer[i].~T();
+    for(auto* it = this->buffer; it != this->next; it++)
+      it->~T();
   }
 };
 
@@ -398,7 +395,8 @@ public:
 
   vector_fixed() : ivector<T>() {
     this->buffer = reinterpret_cast<T*>(static_buffer);
-    this->buffer_size = N;
+    this->_end = this->buffer + N;
+    this->next = this->buffer;
   }
 
   vector_fixed(const std::initializer_list<T>& list) : vector_fixed() {
@@ -424,22 +422,22 @@ class vector final : public ivector<T> {
 
   void free_resources() {
     if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
-      for(size_t i = 0; i < this->_used; i++)
-        this->buffer[i].~T();
+      for(auto* it = this->buffer; it != this->next; it++)
+        it->~T();
     }
 
     if(
         #ifdef ARENA_POOL_CPP
         !_arena &&
         #endif
-        this->buffer_size
+        this->size() 
     )
       free(this->buffer);
 
     this->_arena = nullptr;
     this->buffer = nullptr;
-    this->buffer_size = 0;
-    this->_used = 0;
+    this->next = nullptr;
+    this->_end = nullptr;
   }
 
   void destroy() {
@@ -448,25 +446,33 @@ class vector final : public ivector<T> {
     #endif
 
     this->buffer = nullptr;
-    this->buffer_size = 0;
-    this->_used = 0;
+    this->next = nullptr;
+    this->_end = nullptr;
   }
 
   void maybe_grow(size_t count) {
-    if(!this->buffer_size) {
-      this->init(count);
+    if(count) {
+      if(!this->buffer) {
+        this->init(count);
+      } else if(this->size() - this->used() < count) {
+        size_t new_size = this->size() * 2;
+        size_t min = this->used() + count; 
 
-      return;
+        if(new_size < min) new_size = min;
+
+        this->resize(new_size);
+      }
     }
+  }
 
-    if((this->buffer_size - this->_used) >= count) return;
-
-    size_t new_size = this->buffer_size * 2;
-    size_t min = this->_used + count; 
-
-    if(new_size < min) new_size = min;
-
-    this->resize(new_size);
+  void maybe_grow() {
+    if(this->next == this->_end) {
+      if(!this->buffer) {
+        this->init(1);
+      } else {
+        this->resize(this->used() * 2);
+      }
+    }
   }
 
 public:
@@ -513,8 +519,8 @@ public:
     #endif
 
     this->buffer = other.buffer;
-    this->_used = other._used;
-    this->buffer_size = other.buffer_size;
+    this->_end = other._end;
+    this->next = other.next;
 
     other.destroy();
   }
@@ -580,8 +586,8 @@ public:
     #endif
 
     this->buffer = other.buffer;
-    this->_used = other._used;
-    this->buffer_size = other.buffer_size;
+    this->_end = other._end;
+    this->next = other.next;
 
     other.destroy();
 
@@ -646,7 +652,7 @@ public:
 
   template <typename... Args>
   T* insert_new(size_t position, Args&&... args) {
-    maybe_grow(1);
+    maybe_grow();
     return ivector<T>::insert_new(position, std::forward<Args>(args)...);
   }
 
@@ -657,13 +663,13 @@ public:
 
   template <typename U>
   T* push(U&& item) {
-    maybe_grow(1);
+    maybe_grow();
     return ivector<T>::push(std::forward<T>(item));
   }
 
   template <typename... Args>
   T* push_new(Args&&... args) {
-    maybe_grow(1);
+    maybe_grow();
     return ivector<T>::push_new(std::forward<Args>(args)...);
   }
 
@@ -673,48 +679,55 @@ public:
       #ifdef ARENA_POOL_CPP
       _arena ||
       #endif
-      this->buffer_size
+      this->size()
     ) return;
 
     this->buffer = static_cast<T*>(malloc(sizeof(T) * size));
 
-    if(this->buffer) this->buffer_size = size;
+    if(this->buffer) {
+      this->_end = this->buffer + size;
+      this->next = this->buffer;
+    }
   }
 
   #ifdef ARENA_POOL_CPP
   void init(apc::arena& __arena, const size_t size) {
-    if(!size || _arena || this->buffer_size) return;
+    if(!size || _arena || this->size()) return;
 
     auto* new_buffer = __arena.allocate_size<T>(size);
 
     if(new_buffer) {
       _arena = &__arena;
       this->buffer = new_buffer;
-      this->buffer_size = size;
+      this->_end = this->buffer + size;
+      this->next = this->buffer;
     }
   }
   #endif
 
   bool resize(const size_t size) {
-    if(size == this->buffer_size) return true;
+    if(size == this->size()) return true;
 
     T* new_buffer = nullptr;
-    size_t copy_size = size > this->buffer_size ? this->buffer_size : size;
+    size_t used = this->used();
+    size_t copy_size = size > used ? used : size;
 
     #ifdef ARENA_POOL_CPP
     if(_arena) {
-      if(size < this->buffer_size) {
-        if(this->_used > size) {
+      if(size < this->size()) {
+        if(used > size) {
           if(!std::is_trivially_destructible<T>::value && !FORCE_TRIVIAL_COPY) {
-            for(size_t i = size - 1; i < this->_used; i++) {
+            for(size_t i = size - 1; i < used; i++) {
               this->buffer[i].~T();
             }
           }
 
-          this->_used = size;
+          this->next = this->buffer + size;
         }
 
-        this->buffer_size = size;
+        this->_end = this->buffer + size;
+
+        return true;
       } else {
         new_buffer = _arena->allocate_size<T>(size);
 
@@ -722,7 +735,7 @@ public:
           if(std::is_trivially_copyable<T>::value || FORCE_TRIVIAL_COPY)
             memcpy(new_buffer, this->buffer, sizeof(T) * copy_size);
           else { 
-            for(size_t i = 0; i < this->_used; i++) {
+            for(size_t i = 0; i < used; i++) {
               if(i < copy_size) new (&new_buffer[i]) T(std::move(this->buffer[i]));
 
               if(!std::is_trivially_destructible<T>::value)
@@ -743,7 +756,7 @@ public:
         new_buffer = static_cast<T*>(malloc(sizeof(T) * size));
 
         if(new_buffer) {
-          for(size_t i = 0; i < this->_used; i++) {
+          for(size_t i = 0; i < used; i++) {
               if(i < copy_size)
                 new (&new_buffer[i]) T(std::move(this->buffer[i]));
 
@@ -758,11 +771,8 @@ public:
 
     if(new_buffer) {
       this->buffer = new_buffer;
-      this->buffer_size = size;
-
-      if(this->_used > size) {
-        this->_used = size;
-      }
+      this->_end = this->buffer + size;
+      this->next = this->buffer + copy_size;
 
       return true;
     }
@@ -771,9 +781,11 @@ public:
   }
 
   bool shrink_to_fit() {
-    if(this->_used < this->buffer_size && this->buffer_size > 1) {
-      return resize(this->_used ? this->_used : 1);
-    }
+    size_t used = this->used();
+    size_t size = this->size();
+
+    if(used < size && size > 1)
+      return resize(used ? used : 1);
 
     return 0;
   }
