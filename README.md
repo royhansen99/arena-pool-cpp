@@ -1,7 +1,7 @@
 # arena-pool-cpp
 
 An arena-style bump-allocator with a suite of containers that  
-that can use arenas as the underlying allocator. All containers  
+can use arenas as the underlying allocator. All containers  
 also feature fixed-size stack or dynamic malloc-allocation,  
 outside of arenas. This library aims to have as little overhead  
 as possible, by avoiding dynamic-dispatch and virtual-lookups.
@@ -9,8 +9,7 @@ as possible, by avoiding dynamic-dispatch and virtual-lookups.
 It should be much faster than the standard library std::pmr  
 suite of containers, which has virtual-lookup overhead  
 (virtual methods). Benchmarks indicate that it is on-par with  
-the speed of std::vector, when using malloc instead of arenas,  
-and may even be slightly faster than std::vector.  
+the speed of std::vector, when using malloc instead of arenas.  
 
 This library targets C++11.
 
