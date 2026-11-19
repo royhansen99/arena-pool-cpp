@@ -14,7 +14,7 @@
 #include <cstddef>
 #include <type_traits>
 #include <cstring>
-#include "./vector.h"
+#include <utility>
 #include "./pool.h"
 #include "./rapidhash.h"
 
@@ -32,8 +32,8 @@ struct hashmap_item {
   size_t _used = 0; \
   \
   void _reset(bool reset_pool = false) { \
-    for(size_t i = 0; i < array.size(); i++) { \
-      array[i] = nullptr; \
+    for(size_t i = 0; i < keys_size; i++) { \
+      keys[i] = nullptr; \
     } \
     \
     _used = 0; \
@@ -165,9 +165,9 @@ struct hashmap_item {
   \
   T* find(void* key) { \
     uint64_t hash = rapidhashNano(key, S); \
-    size_t index = hash % (array.size() - 1); \
+    size_t index = hash % (keys_size - 1); \
     \
-    auto* current = array[index]; \
+    auto* current = keys[index]; \
     \
     while(current != nullptr) { \
       if(memcmp(current->key, key, S) == 0) \
@@ -183,17 +183,17 @@ struct hashmap_item {
     if(!_used) return false; \
     \
     uint64_t hash = rapidhashNano(key, S); \
-    size_t index = hash % (array.size() - 1); \
+    size_t index = hash % (keys_size - 1); \
     \
     hashmap_item<T, S>* prev = nullptr; \
-    auto* current = array[index]; \
+    auto* current = keys[index]; \
     \
     while(current != nullptr) { \
       if(memcmp(current->key, key, S) == 0) { \
         if(prev != nullptr)\
           prev->next = current->next; \
         else \
-          array[index] = current->next; \
+          keys[index] = current->next; \
         \
         _used--; \
         pool.deallocate(current); \
@@ -223,16 +223,17 @@ class hashmap;
 template <typename T, size_t S, size_t Z, bool FORCE_TRIVIAL_COPY = false>
 class hashmap_fixed {
 private:
-  apc::vector_fixed<hashmap_item<T, S>*, Z> array;
+  hashmap_item<T, S>* keys[Z];
+  size_t keys_size;
   apc::pool_fixed<hashmap_item<T, S>, Z> pool;
 
   T* insert_raw(void* key) {
     if(!size()) return nullptr;
 
     uint64_t hash = rapidhashNano(key, S);
-    size_t index = hash % (array.size() - 1);      
+    size_t index = hash % (keys_size - 1);      
 
-    auto** location = &array[index];
+    auto** location = &keys[index];
     auto* current = *location;
 
     while(current != nullptr) {
@@ -266,7 +267,7 @@ private:
   HASHMAP_CLASS_COMMON(hashmap_fixed, target_iterator)
 
 public:
-  hashmap_fixed() {
+  hashmap_fixed() : keys_size(Z) {
     _reset();
   }
 };
@@ -278,7 +279,8 @@ private:
   apc::arena* _arena = nullptr;
   #endif
 
-  apc::vector<hashmap_item<T, S>*> array;
+  hashmap_item<T, S>** keys;
+  size_t keys_size;
   apc::pool<hashmap_item<T, S>> pool;
 
   T* insert_raw(void* key) {
@@ -286,9 +288,9 @@ private:
     if(!size()) return nullptr;
 
     uint64_t hash = rapidhashNano(key, S);
-    size_t index = hash % (array.size() - 1);      
+    size_t index = hash % (keys_size - 1);      
 
-    auto** location = &array[index];
+    auto** location = &keys[index];
     auto* current = *location;
 
     while(current != nullptr) {
@@ -316,29 +318,56 @@ private:
     _used++;
 
     if(n->next == nullptr) {
-      float factor = (float)_used / (float)array.size();
+      float factor = (float)_used / (float)keys_size;
 
       if(factor >= 0.75) {
-        size_t new_size = array.size() * 2;
+        size_t new_size = keys_size * 2;
 
-        array.reset(); // reset array before resize, to prevent copying old pointers, because we dont need them. 
-        array.resize(new_size);
+        hashmap_item<T, S>** new_keys = nullptr;
 
-        _reset();
+        #ifdef ARENA_POOL_CPP
+        if(_arena) {
+          new_keys =
+            _arena->allocate_size<hashmap_item<T, S>*>(
+              new_size
+            ); 
+        } else {
+        #endif
+        new_keys = static_cast<hashmap_item<T, S>**>(
+          malloc(sizeof(hashmap_item<T, S>*) * new_size)
+        );
+        #ifdef ARENA_POOL_CPP
+        }
+        #endif
 
-        auto* pool_item = pool.used_ptr();
+        if(new_keys) {
+          #ifdef ARENA_POOL_CPP
+          if(!_arena) {
+          #endif
+          free(keys);
+          #ifdef ARENA_POOL_CPP
+          }
+          #endif
 
-        while(pool_item != nullptr) {
-          uint64_t hash = rapidhashNano(&pool_item->value.key, S);
-          size_t index = hash % (array.size() - 1);
+          keys = new_keys;
+          keys_size = new_size;
 
-          auto* location = array[index];
+          _reset();
 
-          pool_item->value.next = location;
+          auto* pool_item = pool.used_ptr();
 
-          array[index] = &pool_item->value;
+          while(pool_item != nullptr) {
+            uint64_t hash = rapidhashNano(&pool_item->value.key, S);
+            size_t index = hash % (keys_size - 1);
 
-          pool_item = pool_item->next;
+            auto* location = keys[index];
+
+            pool_item->value.next = location;
+
+            keys[index] = &pool_item->value;
+
+            pool_item = pool_item->next;
+          }
         }
       }
     }
@@ -349,8 +378,24 @@ private:
   using target_iterator = typename apc::pool<hashmap_item<T, S>>::iterator;
   HASHMAP_CLASS_COMMON(hashmap, target_iterator)
 
+  void destroy() {
+    keys = nullptr;
+    keys_size = 0;
+    _used = 0;
+  }
+
 public:
-  hashmap(size_t size = 0) {
+  ~hashmap() {
+    #ifdef ARENA_POOL_CPP
+    if(!_arena) {
+    #endif
+    if(keys) free(keys);
+    #ifdef ARENA_POOL_CPP
+    }
+    #endif
+  }
+
+  hashmap(size_t size = 0) : keys(nullptr), keys_size(0) {
     if(!size) return;
 
     init(size);
@@ -361,23 +406,29 @@ public:
     if(other._arena) _arena = other._arena;
     #endif
 
-    array = std::move(other.array);
+    keys = other.keys;
+    keys_size = other.keys_size;
     pool = std::move(other.pool);
     _used = other._used;
 
-    other._used = 0;
+    other.destroy();
   }
 
   hashmap& operator=(hashmap&& other) {
     #ifdef ARENA_POOL_CPP
+    if(!_arena && keys) free(keys);
+
     if(other._arena) _arena = other._arena;
+    #else
+    if(keys) free(keys);
     #endif
 
-    array = std::move(other.array);
+    keys = other.keys;
+    keys_size = other.keys_size;
     pool = std::move(other.pool);
     _used = other._used;
 
-    other._used = 0;
+    other.destroy();
 
     return *this;
   }
@@ -386,8 +437,20 @@ public:
     // If requested size is 0, or already initialized, return.
     if(!_size || size()) return;
 
-    array.init(_size);
+    keys = static_cast<hashmap_item<T, S>**>(
+      malloc(sizeof(hashmap_item<T, S>*) * _size)
+    );
+    if(!keys) return;
+
     pool.init(_size);
+
+    if(!pool.size()) {
+      free(keys);
+      keys = nullptr;
+      return;
+    }
+
+    keys_size = _size;
     _reset();
   }
 
@@ -400,8 +463,17 @@ public:
     // If requested size is 0, or already initialized, return.
     if(!_size || size()) return;
 
-    array.init(arena, _size);
+    keys = arena.allocate_size<hashmap_item<T, S>*>(_size);
+    if(!keys) return;
+
     pool.init(arena, _size);
+
+    if(!pool.size()) {
+      keys = nullptr;
+      return;
+    }
+
+    keys_size = _size;
     _reset();
   }
   #endif
