@@ -25,7 +25,6 @@ struct pool_item {
   T value;
 };
 
-
 template <typename T>
 struct pool_page {
   pool_item<T>* buffer;
@@ -37,7 +36,6 @@ struct pool_page_fixed {
   pool_item<T> buffer[S];
   size_t size = S;
 };
-
 
 template <typename T, size_t S, bool FORCE_TRIVIAL_COPY = false>
 class pool_fixed;
