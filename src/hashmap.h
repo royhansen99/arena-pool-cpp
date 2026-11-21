@@ -440,7 +440,9 @@ private:
         _arena->allocate_raw(
           sizeof(hashmap_page<T, S>) +
           (sizeof(hashmap_page<T, S>*) * (pages_size + 1)) +
-          (sizeof(hashmap_item<T, S>) * _size)
+          alignof(hashmap_page<T, S>*) +
+          (sizeof(hashmap_item<T, S>) * _size) +
+          alignof(hashmap_item<T, S>)
         )
       );
     } else {
@@ -449,7 +451,9 @@ private:
         malloc(
           sizeof(hashmap_page<T, S>) +
           (sizeof(hashmap_page<T, S>*) * (pages_size + 1)) +
-          (sizeof(hashmap_item<T, S>) * _size)
+          alignof(hashmap_page<T, S>*) +
+          (sizeof(hashmap_item<T, S>) * _size) +
+          alignof(hashmap_item<T, S>)
         )
       );
     #ifdef APC_ARENA
@@ -458,19 +462,31 @@ private:
 
     if(!new_buffer) return false;
 
-    auto* new_page = reinterpret_cast<hashmap_page<T, S>*>(new_buffer);
-    auto* new_pages = reinterpret_cast<hashmap_page<T, S>**>(
-      new_buffer + sizeof(hashmap_page<T, S>)
-    );
+    char* position = new_buffer;
+
+    auto* new_page = reinterpret_cast<hashmap_page<T, S>*>(position);
+    position += sizeof(hashmap_page<T, S>);
+
+    {
+      uintptr_t current_addr = reinterpret_cast<uintptr_t>(position);
+      size_t alignment = alignof(hashmap_page<T, S>*);
+      position += (alignment - (current_addr % alignment)) % alignment;
+    }
+
+    auto* new_pages = reinterpret_cast<hashmap_page<T, S>**>(position);
+    position += (sizeof(hashmap_page<T, S>*) * (pages_size + 1));
 
     if(pages_size)
       memcpy(new_pages, pages, sizeof(hashmap_page<T, S>*) * pages_size);
 
+    {
+      uintptr_t current_addr = reinterpret_cast<uintptr_t>(position);
+      size_t alignment = alignof(hashmap_item<T, S>);
+      position += (alignment - (current_addr % alignment)) % alignment;
+    }
+
     new_page->size = _size;
-    new_page->buffer = reinterpret_cast<hashmap_item<T, S>*>(
-      new_buffer + sizeof(hashmap_page<T, S>) +
-      (sizeof(hashmap_page<T, S>*) * (pages_size + 1))
-    );
+    new_page->buffer = reinterpret_cast<hashmap_item<T, S>*>(position);
 
     for(size_t i = 0; i < _size; i++) {
       new_page->buffer[i].next = free_ptr;
