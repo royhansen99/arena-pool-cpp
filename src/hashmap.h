@@ -15,7 +15,6 @@
 #include <type_traits>
 #include <cstring>
 #include <utility>
-#include "./pool.h"
 #include "./rapidhash.h"
 
 namespace apc {
@@ -24,63 +23,96 @@ template <typename T, size_t S>
 struct hashmap_item {
   char key[S];
   T current;
+  hashmap_item<T, S>* hash_next = nullptr;
   hashmap_item<T, S>* next = nullptr;
+  hashmap_item<T, S>* prev = nullptr;
 };
 
-#define HASHMAP_CLASS_COMMON(TYPE, ITERATOR) \
+template <typename T, size_t S>
+struct hashmap_page {
+  hashmap_item<T, S>* buffer;
+  size_t size;
+};
+
+#define HASHMAP_CLASS_COMMON(TYPE) \
   private: \
+  hashmap_item<T, S>* free_ptr = nullptr; \
+  hashmap_item<T, S>* first = nullptr; \
+  hashmap_item<T, S>* last = nullptr; \
   size_t _used = 0; \
+  size_t _size = 0; \
   \
-  void _reset(bool reset_pool = false) { \
+  void reset_keys() { \
     for(size_t i = 0; i < keys_size; i++) { \
       keys[i] = nullptr; \
     } \
-    \
-    _used = 0; \
-    \
-    if(reset_pool) pool.reset(); \
   } \
   \
+  void reset_pool() { \
+    auto* next = first; \
+    while(next != nullptr) { \
+      auto* _next = next->next; \
+      \
+      if(!std::is_trivially_destructible<T>::value && \
+        !FORCE_TRIVIAL_COPY) \
+        next->current.~T(); \
+      \
+      next->next = free_ptr; \
+      free_ptr = next; \
+      \
+      next = _next; \
+    } \
+    \
+    _used = 0; \
+    first = nullptr; \
+    last = nullptr; \
+  } \
   public: \
   class iterator { \
-    ITERATOR it; \
+    hashmap_item<T, S>* it; \
+    bool reverse; \
   public: \
-    explicit iterator(const ITERATOR&& begin): \
-      it(begin) { } \
+    explicit iterator(hashmap_item<T, S>* begin, bool _reverse = false): \
+      it(begin), reverse(_reverse) { } \
     \
-    T& operator*() const { return (*it).current; } \
+    T& operator*() const { return it->current; } \
     \
     bool operator!=(const iterator& other) const { return it != other.it; } \
     \
     bool operator!=(const void* other) const { return it != other; } \
     \
     iterator& operator+(size_t count) { \
-      it + count; \
+      if(it == nullptr) return *this; \
       \
+      if(reverse) { \
+        it = it->next; \
+      } else { \
+        it = it->prev; \
+      } \
       return *this; \
     } \
     \
     iterator& operator++() { \
-      ++it; \
+      operator+(1); \
       \
       return *this; \
     } \
   }; \
   \
   iterator begin() const { \
-    return iterator(pool.begin()); \
+    return iterator(last); \
   } \
   \
   iterator rbegin() const { \
-    return iterator(pool.rbegin()); \
+    return iterator(first, true); \
   } \
   \
   const iterator end() const { \
-    return iterator(pool.end()); \
+    return iterator(nullptr); \
   } \
   \
   const iterator rend() const { \
-    return iterator(pool.rend()); \
+    return iterator(nullptr); \
   } \
   \
   template <size_t X, size_t Y> \
@@ -127,12 +159,15 @@ struct hashmap_item {
     return *this; \
   } \
   \
-  size_t size() { return pool.size(); } \
+  size_t size() { \
+    return _size; \
+  } \
   \
   size_t used() { return _used; } \
   \
   void reset() { \
-    _reset(true); \
+    reset_keys(); \
+    reset_pool(); \
   } \
   \
   T* insert(void* key, T& item) { \
@@ -173,7 +208,7 @@ struct hashmap_item {
       if(memcmp(current->key, key, S) == 0) \
         return &current->current; \
       \
-      current = current->next; \
+      current = current->hash_next; \
     } \
     \
     return nullptr; \
@@ -191,22 +226,32 @@ struct hashmap_item {
     while(current != nullptr) { \
       if(memcmp(current->key, key, S) == 0) { \
         if(prev != nullptr)\
-          prev->next = current->next; \
+          prev->hash_next = current->hash_next; \
         else \
-          keys[index] = current->next; \
+          keys[index] = current->hash_next; \
         \
         _used--; \
-        pool.deallocate(current); \
+        \
+        if(!std::is_trivially_destructible<T>::value) current->current.~T(); \
+        \
+        if(current->next) current->next->prev = current->prev; \
+        if(current->prev) current->prev->next = current->next; \
+        if(last == current) last = current->prev; \
+        if(first == current) first = current->next; \
+        \
+        current->next = free_ptr; \
+        free_ptr = current; \
         \
         return true; \
       } \
       \
       prev = current; \
-      current = current->next; \
+      current = current->hash_next; \
     } \
     \
     return false; \
   } \
+  \
   bool erase(iterator it) { \
     if(!(it != nullptr)) return false; \
     \
@@ -224,8 +269,27 @@ template <typename T, size_t S, size_t Z, bool FORCE_TRIVIAL_COPY = false>
 class hashmap_fixed {
 private:
   hashmap_item<T, S>* keys[Z];
-  size_t keys_size;
-  apc::pool_fixed<hashmap_item<T, S>, Z> pool;
+  size_t keys_size = Z;
+  hashmap_item<T, S> buffer[Z];
+
+  hashmap_item<T, S>* allocate() {
+    if(!free_ptr) return nullptr;
+
+    auto* current = free_ptr;
+    free_ptr = current->next;
+
+    current->hash_next = nullptr;
+    current->prev = nullptr;
+    current->next = first;
+
+    if(first) first->prev = current;
+
+    first = current;
+
+    if(!last) last = current;
+
+    return current;
+  }
 
   T* insert_raw(void* key) {
     if(!size()) return nullptr;
@@ -248,7 +312,7 @@ private:
       current = current->next;
     }
 
-    apc::hashmap_item<T, S>* n = pool.allocate_raw();
+    auto* n = allocate();
 
     if(n == nullptr) return nullptr;
 
@@ -263,12 +327,16 @@ private:
     return &n->current;
   }
 
-  using target_iterator = typename apc::pool_fixed<hashmap_item<T, S>, Z>::iterator;
-  HASHMAP_CLASS_COMMON(hashmap_fixed, target_iterator)
+  HASHMAP_CLASS_COMMON(hashmap_fixed)
 
 public:
-  hashmap_fixed() : keys_size(Z) {
-    _reset();
+  hashmap_fixed() : _size(Z) {
+    reset_keys();
+
+    for(size_t i = 0; i < Z; i++) {
+      buffer[i].next = free_ptr;
+      free_ptr = &buffer[i];
+    }
   }
 };
 
@@ -279,16 +347,36 @@ private:
   apc::arena* _arena = nullptr;
   #endif
 
-  hashmap_item<T, S>** keys;
-  size_t keys_size;
-  apc::pool<hashmap_item<T, S>> pool;
+  hashmap_item<T, S>** keys = nullptr;
+  size_t keys_size = 0;
+  hashmap_page<T, S>** pages = nullptr;
+  size_t pages_size = 0;
+
+  hashmap_item<T, S>* allocate() {
+    if(!free_ptr && !add_page(size() * 2)) return nullptr;
+
+    auto* current = free_ptr;
+    free_ptr = current->next;
+
+    current->hash_next = nullptr;
+    current->prev = nullptr;
+    current->next = first;
+
+    if(first) first->prev = current;
+
+    first = current;
+
+    if(!last) last = current;
+
+    return current;
+  }
 
   T* insert_raw(void* key) {
     if(!size()) init();
     if(!size()) return nullptr;
 
     uint64_t hash = rapidhashNano(key, S);
-    size_t index = hash % (keys_size - 1);      
+    size_t index = hash % (keys_size - 1);
 
     auto** location = &keys[index];
     auto* current = *location;
@@ -302,16 +390,16 @@ private:
         return &current->current;
       }
 
-      current = current->next;
+      current = current->hash_next;
     }
 
-    apc::hashmap_item<T, S>* n = pool.allocate_raw();
+    auto* n = allocate();
 
     if(n == nullptr) return nullptr;
 
     memcpy(n->key, key, S);
 
-    n->next = *location;
+    n->hash_next = *location;
 
     *location = n;
 
@@ -321,52 +409,20 @@ private:
       float factor = (float)_used / (float)keys_size;
 
       if(factor >= 0.75) {
-        size_t new_size = keys_size * 2;
+        if(resize_keys(keys_size * 2)) {
+          reset_keys();
 
-        hashmap_item<T, S>** new_keys = nullptr;
+          auto* next = first;
 
-        #ifdef ARENA_POOL_CPP
-        if(_arena) {
-          new_keys =
-            _arena->allocate_size<hashmap_item<T, S>*>(
-              new_size
-            ); 
-        } else {
-        #endif
-        new_keys = static_cast<hashmap_item<T, S>**>(
-          malloc(sizeof(hashmap_item<T, S>*) * new_size)
-        );
-        #ifdef ARENA_POOL_CPP
-        }
-        #endif
-
-        if(new_keys) {
-          #ifdef ARENA_POOL_CPP
-          if(!_arena) {
-          #endif
-          free(keys);
-          #ifdef ARENA_POOL_CPP
-          }
-          #endif
-
-          keys = new_keys;
-          keys_size = new_size;
-
-          _reset();
-
-          auto* pool_item = pool.used_ptr();
-
-          while(pool_item != nullptr) {
-            uint64_t hash = rapidhashNano(&pool_item->value.key, S);
+          while(next != nullptr) {
+            uint64_t hash = rapidhashNano(&next->key, S);
             size_t index = hash % (keys_size - 1);
 
-            auto* location = keys[index];
+            next->hash_next = keys[index];
 
-            pool_item->value.next = location;
+            keys[index] = next;
 
-            keys[index] = &pool_item->value;
-
-            pool_item = pool_item->next;
+            next = next->next;
           }
         }
       }
@@ -375,27 +431,149 @@ private:
     return &n->current;
   }
 
-  using target_iterator = typename apc::pool<hashmap_item<T, S>>::iterator;
-  HASHMAP_CLASS_COMMON(hashmap, target_iterator)
+  bool add_page(size_t _size) {
+    char* new_buffer;
 
-  void destroy() {
-    keys = nullptr;
-    keys_size = 0;
-    _used = 0;
+    #ifdef ARENA_POOL_CPP
+    if(_arena) {
+      new_buffer = static_cast<char*>(
+        _arena->allocate_raw(
+          sizeof(hashmap_page<T, S>) +
+          (sizeof(hashmap_page<T, S>*) * (pages_size + 1)) +
+          (sizeof(hashmap_item<T, S>) * _size)
+        )
+      );
+    } else {
+    #endif
+      new_buffer = static_cast<char*>(
+        malloc(
+          sizeof(hashmap_page<T, S>) +
+          (sizeof(hashmap_page<T, S>*) * (pages_size + 1)) +
+          (sizeof(hashmap_item<T, S>) * _size)
+        )
+      );
+    #ifdef ARENA_POOL_CPP
+    }
+    #endif
+
+    if(!new_buffer) return false;
+
+    auto* new_page = reinterpret_cast<hashmap_page<T, S>*>(new_buffer);
+    auto* new_pages = reinterpret_cast<hashmap_page<T, S>**>(
+      new_buffer + sizeof(hashmap_page<T, S>)
+    );
+
+    if(pages_size)
+      memcpy(new_pages, pages, sizeof(hashmap_page<T, S>*) * pages_size);
+
+    new_page->size = _size;
+    new_page->buffer = reinterpret_cast<hashmap_item<T, S>*>(
+      new_buffer + sizeof(hashmap_page<T, S>) +
+      (sizeof(hashmap_page<T, S>*) * (pages_size + 1))
+    );
+
+    for(size_t i = 0; i < _size; i++) {
+      new_page->buffer[i].next = free_ptr;
+      free_ptr = &new_page->buffer[i];
+    }
+
+    new_pages[pages_size] = new_page;
+    pages = new_pages;
+    pages_size++;
+    this->_size += new_page->size;
+
+    return true;
   }
 
-public:
-  ~hashmap() {
+  bool resize_keys(size_t _size) {
+    hashmap_item<T, S>** new_keys;
+
+    #ifdef ARENA_POOL_CPP
+    if(_arena) {
+      new_keys = _arena->allocate_size<hashmap_item<T, S>*>(_size);
+    } else {
+    #endif
+    new_keys = static_cast<hashmap_item<T, S>**>(
+      malloc(sizeof(hashmap_item<T, S>*) * _size)
+    );
+    #ifdef ARENA_POOL_CPP
+    }
+    #endif
+
+    if(!new_keys) return false;
+
+    #ifdef ARENA_POOL_CPP
+    if(!_arena && keys) free(keys);
+    #else
+    if(keys) free(keys);
+    #endif
+
+    keys = new_keys;
+    keys_size = _size;
+
+    return true;
+  }
+
+  void free_resources(bool destructor = false) {
+    if(!std::is_trivially_destructible<T>::value) { 
+      for(auto* current = first; current != nullptr; current = current->next)
+        current->current.~T();
+    }
+
     #ifdef ARENA_POOL_CPP
     if(!_arena) {
     #endif
     if(keys) free(keys);
+    if(pages) {
+      for(size_t i = 0; i < pages_size; i++)
+        free(pages[i]);
+    }
     #ifdef ARENA_POOL_CPP
     }
     #endif
+
+    // Only zero values if this is not called from the
+    // destructor.
+    if(!destructor) destroy();
   }
 
-  hashmap(size_t size = 0) : keys(nullptr), keys_size(0) {
+  void destroy() {
+    free_ptr = nullptr;
+    first = nullptr;
+    last = nullptr;
+
+    keys = nullptr;
+    keys_size = 0;
+    pages = nullptr;
+    pages_size = 0;
+    _used = 0;
+    _size = 0;
+  }
+
+  void move(hashmap&& other) {
+    keys = other.keys;
+    keys_size = other.keys_size;
+    pages = other.pages;
+    pages_size = other.pages_size;
+
+    first = other.first;
+    last = other.last;
+    free_ptr = other.free_ptr;
+
+    _used = other._used;
+    _size = other._size;
+
+    other.destroy();
+  }
+
+  HASHMAP_CLASS_COMMON(hashmap)
+
+public:
+  ~hashmap() {
+    free_resources(true);
+  }
+
+  hashmap(size_t size = 0) {
     if(!size) return;
 
     init(size);
@@ -406,29 +584,12 @@ public:
     if(other._arena) _arena = other._arena;
     #endif
 
-    keys = other.keys;
-    keys_size = other.keys_size;
-    pool = std::move(other.pool);
-    _used = other._used;
-
-    other.destroy();
+    move(std::move(other));
   }
 
   hashmap& operator=(hashmap&& other) {
-    #ifdef ARENA_POOL_CPP
-    if(!_arena && keys) free(keys);
-
-    if(other._arena) _arena = other._arena;
-    #else
-    if(keys) free(keys);
-    #endif
-
-    keys = other.keys;
-    keys_size = other.keys_size;
-    pool = std::move(other.pool);
-    _used = other._used;
-
-    other.destroy();
+    free_resources();
+    move(std::move(other));
 
     return *this;
   }
@@ -437,25 +598,21 @@ public:
     // If requested size is 0, or already initialized, return.
     if(!_size || size()) return;
 
-    keys = static_cast<hashmap_item<T, S>**>(
-      malloc(sizeof(hashmap_item<T, S>*) * _size)
-    );
-    if(!keys) return;
+    if(!resize_keys(_size)) return;
 
-    pool.init(_size);
-
-    if(!pool.size()) {
+    if(!add_page(_size)) {
       free(keys);
       keys = nullptr;
+      keys_size = 0;
       return;
     }
 
-    keys_size = _size;
-    _reset();
+    reset_keys();
   }
 
   #ifdef ARENA_POOL_CPP
-  hashmap(apc::arena& arena, size_t size = 16) : _arena(&arena) {
+  hashmap(apc::arena& arena, size_t size = 16) {
+    _arena = &arena;
     init(arena, size);
   }
 
@@ -463,18 +620,9 @@ public:
     // If requested size is 0, or already initialized, return.
     if(!_size || size()) return;
 
-    keys = arena.allocate_size<hashmap_item<T, S>*>(_size);
-    if(!keys) return;
+    _arena = &arena;
 
-    pool.init(arena, _size);
-
-    if(!pool.size()) {
-      keys = nullptr;
-      return;
-    }
-
-    keys_size = _size;
-    _reset();
+    init(_size);
   }
   #endif
 };
