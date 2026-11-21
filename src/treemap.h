@@ -670,7 +670,7 @@ public:
 template <typename T, typename K, typename COMPARE, bool FORCE_TRIVIAL_COPY>
 class treemap {
 private:
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   apc::arena* arena = nullptr;
   #endif
 
@@ -696,7 +696,7 @@ private:
       }
     }
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(!arena) {
     #endif
       for(size_t i = 0; i < pages_size; i++) {
@@ -704,11 +704,11 @@ private:
       }
 
       if(pages != nullptr) free(pages);
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     }
     #endif
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     arena = nullptr;
     #endif
 
@@ -724,7 +724,7 @@ private:
   }
 
   void destroy() {
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     arena = nullptr;
     #endif
 
@@ -740,7 +740,7 @@ private:
   }
 
   void move(treemap&& other) {
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     arena = other.arena;
     #endif
 
@@ -762,7 +762,7 @@ public:
     if(treemap_size) grow(treemap_size);
   }
 
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   treemap(apc::arena& _arena, const size_t treemap_size = 0) : arena(&_arena) {
     if(treemap_size) grow(treemap_size);
   }
@@ -787,7 +787,7 @@ public:
     treemap_node<T, K>* new_buffer = nullptr;
     size_t new_count = pages_size + 1;
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(arena)
       new_buffer = arena->allocate_size<treemap_node<T, K>>(size);
     else
@@ -800,7 +800,7 @@ public:
 
     treemap_page<T, K>* new_list = nullptr;
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(arena)
       new_list = arena->allocate_size<treemap_page<T, K>>(new_count);
     else if(pages_size)
@@ -823,7 +823,7 @@ public:
     #endif
 
     if(!new_list) {
-      #ifdef ARENA_POOL_CPP
+      #ifdef APC_ARENA
       if(!arena)
       #endif
         free(new_buffer);
@@ -831,7 +831,7 @@ public:
       return false;
     }
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(arena && pages_size)
       memcpy(new_list, pages, sizeof(treemap_page<T, K>) * pages_size);
     #endif
@@ -854,7 +854,7 @@ public:
     return !size() && treemap_size ? grow(treemap_size) : false;
   }
 
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   bool init(apc::arena& _arena, const size_t treemap_size) {
     if(size() || !treemap_size) return false;
 

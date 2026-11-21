@@ -343,7 +343,7 @@ public:
 template <typename T, size_t S, bool FORCE_TRIVIAL_COPY>
 class hashmap {
 private:
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   apc::arena* _arena = nullptr;
   #endif
 
@@ -434,7 +434,7 @@ private:
   bool add_page(size_t _size) {
     char* new_buffer;
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(_arena) {
       new_buffer = static_cast<char*>(
         _arena->allocate_raw(
@@ -452,7 +452,7 @@ private:
           (sizeof(hashmap_item<T, S>) * _size)
         )
       );
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     }
     #endif
 
@@ -488,7 +488,7 @@ private:
   bool resize_keys(size_t _size) {
     hashmap_item<T, S>** new_keys;
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(_arena) {
       new_keys = _arena->allocate_size<hashmap_item<T, S>*>(_size);
     } else {
@@ -496,13 +496,13 @@ private:
     new_keys = static_cast<hashmap_item<T, S>**>(
       malloc(sizeof(hashmap_item<T, S>*) * _size)
     );
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     }
     #endif
 
     if(!new_keys) return false;
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(!_arena && keys) free(keys);
     #else
     if(keys) free(keys);
@@ -520,7 +520,7 @@ private:
         current->current.~T();
     }
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(!_arena) {
     #endif
     if(keys) free(keys);
@@ -528,7 +528,7 @@ private:
       for(size_t i = 0; i < pages_size; i++)
         free(pages[i]);
     }
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     }
     #endif
 
@@ -580,7 +580,7 @@ public:
   }
 
   hashmap(hashmap&& other) {
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(other._arena) _arena = other._arena;
     #endif
 
@@ -610,7 +610,7 @@ public:
     reset_keys();
   }
 
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   hashmap(apc::arena& arena, size_t size = 16) {
     _arena = &arena;
     init(arena, size);

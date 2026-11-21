@@ -494,7 +494,7 @@ std::ostream& operator<<(std::ostream& os, const str_fixed<N>& str) {
 
 template <size_t N>
 class str_dynamic {
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   apc::arena* _arena;
   #endif
   char* buffer;
@@ -504,13 +504,13 @@ class str_dynamic {
 
   void free_resources() {
     if(
-      #ifdef ARENA_POOL_CPP
+      #ifdef APC_ARENA
       _arena == nullptr &&
       #endif
       buffer != static_buffer
     ) free(buffer);
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     _arena = nullptr;
     #endif
 
@@ -588,7 +588,7 @@ public:
   STRING_COMMON_ITERATOR(str_dynamic)
 
   str_dynamic(size_t size = N) :
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     _arena(nullptr),
     #endif
     buffer(static_buffer),
@@ -607,7 +607,7 @@ public:
   template <size_t S>
   str_dynamic(str_dynamic<S>&& other) : str_dynamic()
   {
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(other._arena) _arena = other._arena;
     #endif
 
@@ -643,7 +643,7 @@ public:
     append(other);
   }
 
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   str_dynamic(apc::arena& arena, size_t size = N) :
     _arena(&arena),
     buffer(static_buffer),
@@ -694,7 +694,7 @@ public:
 
       memcpy(static_buffer, buffer, _used); 
       
-      #ifdef ARENA_POOL_CPP
+      #ifdef APC_ARENA
       if(!_arena) free(buffer);
       #else
       free(buffer);
@@ -707,7 +707,7 @@ public:
       if(buffer == static_buffer) {
         char* new_buffer = nullptr;
 
-        #ifdef ARENA_POOL_CPP
+        #ifdef APC_ARENA
         if(_arena) new_buffer = _arena->allocate_size<char>(size + 1);
         else
         #endif
@@ -721,7 +721,7 @@ public:
       } else {
         char* new_buffer = nullptr;
 
-        #ifdef ARENA_POOL_CPP
+        #ifdef APC_ARENA
         if(_arena) {
           new_buffer = _arena->allocate_size<char>(size + 1);
 
@@ -759,7 +759,7 @@ public:
   str_dynamic& operator=(str_dynamic<N>&& other) {
     free_resources();
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(other._arena) _arena = other._arena;
     #endif
 
@@ -795,7 +795,7 @@ public:
   }
 
   void shrink_to_fit() {
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(_arena) return;
     #endif
 

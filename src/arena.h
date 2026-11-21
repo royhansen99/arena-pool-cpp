@@ -17,7 +17,7 @@
 #include <cstring>
 #include <utility>
 
-#define ARENA_POOL_CPP 1
+#define APC_ARENA 1
 
 namespace apc {
 

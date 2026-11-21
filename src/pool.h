@@ -222,7 +222,7 @@ class pool_fixed;
 template <typename T, bool FORCE_TRIVIAL_COPY = false>
 class pool {
 private:
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   apc::arena* arena = nullptr;
   #endif
 
@@ -230,7 +230,7 @@ private:
   size_t pages_size = 0;
 
   void destroy() {
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     arena = nullptr;
     #endif
 
@@ -251,7 +251,7 @@ private:
       }
     }
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(!arena) {
     #endif
       for(size_t i = 0; i < pages_size; i++) {
@@ -259,7 +259,7 @@ private:
       }
 
       free(pages);
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     }
     #endif
 
@@ -290,7 +290,7 @@ public:
   POOL_CLASS_COMMON(pool)
 
 public:
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   pool(apc::arena& _arena, const size_t pool_size = 0) : arena(&_arena) {
     if(pool_size) grow(pool_size);
   }
@@ -336,7 +336,7 @@ public:
     if(pool_size) grow(pool_size);
   }
 
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   void init(apc::arena& _arena, const size_t pool_size) {
     if(size() == 0) arena = &_arena;
 
@@ -348,7 +348,7 @@ public:
     pool_item<T>* new_buffer = nullptr;
     size_t new_count = pages_size + 1;
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(arena)
       new_buffer = arena->allocate_size<pool_item<T>>(size);
     else
@@ -359,7 +359,7 @@ public:
 
     pool_page<T>* new_list = nullptr;
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(arena)
       new_list = arena->allocate_size<pool_page<T>>(new_count);
     else if(pages_size)
@@ -374,7 +374,7 @@ public:
     #endif
 
     if(!new_list) {
-      #ifdef ARENA_POOL_CPP
+      #ifdef APC_ARENA
       if(!arena)
       #endif
         free(new_buffer);
@@ -382,7 +382,7 @@ public:
       return false;
     }
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(arena && pages_size)
       memcpy(new_list, pages, sizeof(pool_page<T>) * pages_size);
     #endif

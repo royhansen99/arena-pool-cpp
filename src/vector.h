@@ -367,7 +367,7 @@ public:
     return next == buffer;
   }
 
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   arena* arena() const {
     return nullptr;
   }
@@ -416,7 +416,7 @@ public:
 
 template <typename T, bool FORCE_TRIVIAL_COPY = false>
 class vector final : public ivector<T> {
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   apc::arena* _arena;
   #endif
 
@@ -427,7 +427,7 @@ class vector final : public ivector<T> {
     }
 
     if(
-        #ifdef ARENA_POOL_CPP
+        #ifdef APC_ARENA
         !_arena &&
         #endif
         this->size() 
@@ -441,7 +441,7 @@ class vector final : public ivector<T> {
   }
 
   void destroy() {
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     _arena = nullptr;
     #endif
 
@@ -477,7 +477,7 @@ class vector final : public ivector<T> {
 
 public:
   vector(const size_t size = 0) :
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     ivector<T>(),
     _arena(nullptr)
     #else
@@ -514,7 +514,7 @@ public:
   #endif
 
   vector(vector&& other) {
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(other.arena()) _arena = other.arena();
     #endif
 
@@ -542,7 +542,7 @@ public:
     this->operator=(other);
   }
 
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   vector(apc::arena& __arena, const size_t size) : ivector<T>(), _arena(nullptr) {
     init(__arena, size);
   }
@@ -581,7 +581,7 @@ public:
   vector& operator=(vector&& other) {
     free_resources();
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(other.arena()) _arena = other.arena();
     #endif
 
@@ -676,7 +676,7 @@ public:
   void init(const size_t size) {
     if(
       !size ||
-      #ifdef ARENA_POOL_CPP
+      #ifdef APC_ARENA
       _arena ||
       #endif
       this->size()
@@ -690,7 +690,7 @@ public:
     }
   }
 
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   void init(apc::arena& __arena, const size_t size) {
     if(!size || _arena || this->size()) return;
 
@@ -712,7 +712,7 @@ public:
     size_t used = this->used();
     size_t copy_size = size > used ? used : size;
 
-    #ifdef ARENA_POOL_CPP
+    #ifdef APC_ARENA
     if(_arena) {
       if(size < this->size()) {
         if(used > size) {
@@ -790,7 +790,7 @@ public:
     return 0;
   }
 
-  #ifdef ARENA_POOL_CPP
+  #ifdef APC_ARENA
   apc::arena* arena() const {
     return _arena;
   }
