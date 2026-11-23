@@ -125,6 +125,17 @@ std::list (dynamic)     alloc:  10.61 ns  reset:  11.64 ns
 std::map (dynamic)      alloc:  35.69 ns  reset:  21.59 ns
 ```
 
+```
+Benchmarking 3M lookups/find across 10M int keys
+apc::pool    (too slow)
+apc::vector  (too slow)
+apc::hashmap find:   1.83 ns
+apc::treemap find:   6.22 ns
+std::vector  (too slow)
+std::list    (too slow)
+std::map     find:   3.35 ns
+```
+
 ### Build tests 
 
 // MacOS
