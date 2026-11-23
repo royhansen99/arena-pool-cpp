@@ -303,6 +303,10 @@ class treemap;
       } \
       \
       auto* x = root; \
+      \
+      if(last && COMPARE{}(last->key, z->key)) x = last; \
+      else if(first && COMPARE{}(z->key, first->key)) x = first; \
+      \
       treemap_node<T, K>* y = nullptr; \
       \
       while(x != nullptr) { \
