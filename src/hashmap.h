@@ -353,7 +353,7 @@ private:
   size_t pages_size = 0;
 
   hashmap_item<T, S>* allocate() {
-    if(!free_ptr && !add_page(size() * 2)) return nullptr;
+    if(!free_ptr && !add_page(size() ? size() : 1)) return nullptr;
 
     auto* current = free_ptr;
     free_ptr = current->next;

@@ -530,8 +530,7 @@ class str_dynamic {
     if(new_size <= _size) return;
 
     if(!init) {
-      size_t double_size = ((_size) * 2);
-      if(new_size < double_size) new_size = double_size;
+      if(new_size < _size * 2) new_size = _size * 2;
     }
 
     resize(new_size);

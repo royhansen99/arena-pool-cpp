@@ -390,15 +390,15 @@ int main() {
 
     map.insert(2, 2);
 
-    assert(map.size() == 3);
+    assert(map.size() == 2);
 
     map.insert(3, 3);
       
-    assert(map.size() == 3);
+    assert(map.size() == 4);
       
     map.insert(4, 4);
 
-    assert(map.size() == 9);
+    assert(map.size() == 4);
       
     map.insert(5, 5);
     map.insert(6, 6);
@@ -406,7 +406,7 @@ int main() {
     map.insert(8, 8);
     map.insert(9, 9);
       
-    assert(map.size() == 9);
+    assert(map.size() == 16);
   }
 
   { /* Test allocation using arena */

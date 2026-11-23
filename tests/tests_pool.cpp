@@ -211,16 +211,16 @@ int main() {
     pool.allocate(3);
 
     assert(
-      pool.size() == 3 &&
+      pool.size() == 4 &&
       pool.used() == 3 
     );
 
-    // Will grow by + (current_size * 2)
     pool.allocate(4);
+    pool.allocate(5);
 
     assert(
-      pool.size() == 9 &&
-      pool.used() == 4 
+      pool.size() == 8 &&
+      pool.used() == 5 
     );
   }
 

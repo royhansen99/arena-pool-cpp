@@ -683,7 +683,7 @@ private:
 
   treemap_node<T, K>* allocate() {
     if(free_ptr == nullptr) {
-      if(!grow(size() ? size() * 2 : 1)) return nullptr;
+      if(!grow(size() ? size() : 1)) return nullptr;
     }
 
     auto* item = free_ptr;

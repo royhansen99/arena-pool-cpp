@@ -35,8 +35,7 @@ size.
 Arenas, Hashmaps, Treemaps and Pools will maintain stable  
 pointers as they grow.
 
-In general, all containers will grow by (+ size x 2) when they  
-are full.
+In general, all containers will double size when they are full.  
 
 All containers allow you to manually/forcefully specify that your  
 data-structure is trivially copyable in the template-signature.
@@ -90,46 +89,41 @@ __Smaller numbers is better!__
 
 ```
 Benchmarking 10M int allocations with a single cheap reset
-apc::arena              alloc:   0.75 ns  reset:   0.00 ns
-apc::pool (reserve)     alloc:   3.18 ns  reset:   0.51 ns
-apc::pool (dynamic)     alloc:   5.14 ns  reset:   1.60 ns
+apc::arena              alloc:   0.62 ns  reset:   0.00 ns
+apc::pool (reserve)     alloc:   2.44 ns  reset:   0.80 ns
+apc::pool (dynamic)     alloc:   5.43 ns  reset:   1.44 ns
 apc::vector (reserve)   alloc:   0.74 ns  reset:   0.00 ns
-apc::vector (dynamic)   alloc:   0.84 ns  reset:   0.00 ns
-apc::hashmap (reserve)  alloc:  52.02 ns  reset:   0.71 ns
-apc::hashmap (dynamic)  (too slow to measure)
-apc::treemap (reserve)  alloc:   8.80 ns  reset:   0.77 ns
-apc::treemap (dynamic)  alloc:  13.57 ns  reset:   2.19 ns
-pmr::vector (reserve)   alloc:   0.74 ns  reset:   0.00 ns
-pmr::vector (dynamic)   alloc:   1.32 ns  reset:   0.00 ns
-std::vector (reserve)   alloc:   0.52 ns  reset:   0.00 ns
-std::vector (dynamic)   alloc:   1.27 ns  reset:   0.00 ns
-std::list (dynamic)     alloc:  10.06 ns  reset:  10.84 ns
-std::map (dynamic)      alloc:  52.81 ns  reset:  16.30 ns
+apc::vector (dynamic)   alloc:   0.99 ns  reset:   0.00 ns
+apc::hashmap (reserve)  alloc:  54.18 ns  reset:   0.79 ns
+apc::hashmap (dynamic)  alloc:  63.18 ns  reset:   0.94 ns
+apc::treemap (reserve)  alloc:   7.96 ns  reset:   0.73 ns
+apc::treemap (dynamic)  alloc:  13.84 ns  reset:   3.00 ns
+pmr::vector (reserve)   alloc:   0.69 ns  reset:   0.00 ns
+pmr::vector (dynamic)   alloc:   1.30 ns  reset:   0.00 ns
+std::vector (reserve)   alloc:   0.50 ns  reset:   0.00 ns
+std::vector (dynamic)   alloc:   0.97 ns  reset:   0.00 ns
+std::list (dynamic)     alloc:  10.15 ns  reset:  12.10 ns
+std::map (dynamic)      alloc:  52.66 ns  reset:  16.70 ns
 ```
 
 ```
 Benchmarking 100K int allocations with individual expensive erase
 apc::arena              (individual reset not supported)
-apc::pool (reserve)     alloc:   1.18 ns  reset:   0.46 ns
-apc::pool (dynamic)     alloc:   4.47 ns  reset:   0.73 ns
-apc::vector (reserve)   alloc:   0.74 ns  reset: 3347.55 ns
-apc::vector (dynamic)   alloc:   1.15 ns  reset: 3415.96 ns
-apc::hashmap (reserve)  alloc:  14.86 ns  reset:  21.56 ns
-apc::hashmap (dynamic)  alloc: 18257.56 ns  reset: 18572.57 ns
-apc::treemap (reserve)  alloc:   7.86 ns  reset:  17.95 ns
-apc::treemap (dynamic)  alloc:  12.53 ns  reset:  20.42 ns
-pmr::vector (reserve)   alloc:   0.73 ns  reset: 3340.98 ns
-pmr::vector (dynamic)   alloc:   1.12 ns  reset: 3341.33 ns
-std::vector (reserve)   alloc:   0.68 ns  reset: 3340.69 ns
-std::vector (dynamic)   alloc:   0.88 ns  reset: 3339.50 ns
-std::list (dynamic)     alloc:   7.99 ns  reset:  10.41 ns
-std::map (dynamic)      alloc:  31.00 ns  reset:  19.99 ns
+apc::pool (reserve)     alloc:   1.13 ns  reset:   0.39 ns
+apc::pool (dynamic)     alloc:   3.86 ns  reset:   0.52 ns
+apc::vector (reserve)   alloc:   0.69 ns  reset: 3390.79 ns
+apc::vector (dynamic)   alloc:   1.23 ns  reset: 3408.72 ns
+apc::hashmap (reserve)  alloc:  18.58 ns  reset:  16.70 ns
+apc::hashmap (dynamic)  alloc:  23.33 ns  reset:  13.50 ns
+apc::treemap (reserve)  alloc:   7.18 ns  reset:  17.52 ns
+apc::treemap (dynamic)  alloc:  10.61 ns  reset:  18.70 ns
+pmr::vector (reserve)   alloc:   0.75 ns  reset: 3362.82 ns
+pmr::vector (dynamic)   alloc:   1.89 ns  reset: 3361.03 ns
+std::vector (reserve)   alloc:   0.77 ns  reset: 3364.47 ns
+std::vector (dynamic)   alloc:   0.70 ns  reset: 3331.71 ns
+std::list (dynamic)     alloc:  10.61 ns  reset:  11.64 ns
+std::map (dynamic)      alloc:  35.69 ns  reset:  21.59 ns
 ```
-
-Note: The slowness of the apc::hashmap when using dynamic  
-allocation, is caused by rehashing keys at every  
-75%-fill-up-point, because the keys continous-array grows by  
-x2.
 
 ### Build tests 
 

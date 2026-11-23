@@ -73,7 +73,7 @@ int main() {
     for(int i = 20; i < 40; i++)
       map.insert(&i, i);
       
-    assert(map.size() == 16 + (16 * 2)); // size doubled
+    assert(map.size() == 64); // size doubled
   }
 
   // Arean

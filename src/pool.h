@@ -267,7 +267,7 @@ private:
 public:
   T* allocate_raw() {
     if(!free_ptr) {
-      if(!grow(size() ? size() * 2 : 1)) return nullptr;
+      if(!grow(size() ? size() : 1)) return nullptr;
     }
 
     pool_item<T>* chunk = free_ptr;

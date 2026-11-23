@@ -186,8 +186,8 @@ public:
       if(i == pages_size) {
         if(is_static) break;
 
-        const size_t grow_size = i == 0 ? size + alignment :
-          pages[i - 1].size * 2;
+        size_t grow_size = this->size();
+        if(size + alignment > grow_size) grow_size = size + alignment;
 
         if(!grow(grow_size)) break; 
       }
