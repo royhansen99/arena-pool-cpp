@@ -405,25 +405,23 @@ private:
 
     _used++;
 
-    if(n->next == nullptr) {
-      float factor = (float)_used / (float)keys_size;
+    float factor = (float)_used / (float)keys_size;
 
-      if(factor >= 0.75) {
-        if(resize_keys(keys_size * 2)) {
-          reset_keys();
+    if(factor >= 0.75) {
+      if(resize_keys(keys_size * 2)) {
+        reset_keys();
 
-          auto* next = first;
+        auto* next = first;
 
-          while(next != nullptr) {
-            uint64_t hash = rapidhashNano(&next->key, S);
-            size_t index = hash % (keys_size - 1);
+        while(next != nullptr) {
+          uint64_t hash = rapidhashNano(&next->key, S);
+          size_t index = hash % (keys_size - 1);
 
-            next->hash_next = keys[index];
+          next->hash_next = keys[index];
 
-            keys[index] = next;
+          keys[index] = next;
 
-            next = next->next;
-          }
+          next = next->next;
         }
       }
     }

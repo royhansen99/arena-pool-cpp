@@ -200,7 +200,6 @@ int main() {
       // --------------------------------------------------------------
       // apc::hashmap (dynamic) 
       // --------------------------------------------------------------
-      if(CAP == 100000)
       {
         apc::hashmap<int, sizeof(int)> map;
 
@@ -223,8 +222,6 @@ int main() {
 
         std::cout << "apc::hashmap (dynamic)  alloc: " << std::setw(6) << alloc_ns
                   << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
-      } else {
-        std::cout << "apc::hashmap (dynamic)  (too slow to measure)\n";
       }
 
       // --------------------------------------------------------------
