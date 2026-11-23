@@ -89,28 +89,47 @@ For usage examples please look at tests in the tests/ folder.
 __Smaller numbers is better!__
 
 ```
-Benchmarking 10000000 int allocations with a single cheap mass-dealloc/reset
-apc::arena              alloc:   0.60 ns  dealloc:   0.00 ns
-apc::pool (reserve)     alloc:   3.11 ns  dealloc:   0.79 ns
-apc::pool (dynamic)     alloc:   6.26 ns  dealloc:   1.23 ns
-apc::vector (reserve)   alloc:   0.72 ns  dealloc:   0.00 ns
-apc::vector (dynamic)   alloc:   0.92 ns  dealloc:   0.00 ns
-std::vector (reserve)   alloc:   0.47 ns  dealloc:   0.00 ns
-std::vector (dynamic)   alloc:   1.08 ns  dealloc:   0.00 ns
-std::list               alloc:  10.15 ns  dealloc:  10.69 ns
+Benchmarking 10M int allocations with a single cheap reset
+apc::arena              alloc:   0.75 ns  reset:   0.00 ns
+apc::pool (reserve)     alloc:   3.18 ns  reset:   0.51 ns
+apc::pool (dynamic)     alloc:   5.14 ns  reset:   1.60 ns
+apc::vector (reserve)   alloc:   0.74 ns  reset:   0.00 ns
+apc::vector (dynamic)   alloc:   0.84 ns  reset:   0.00 ns
+apc::hashmap (reserve)  alloc:  52.02 ns  reset:   0.71 ns
+apc::hashmap (dynamic)  (too slow to measure)
+apc::treemap (reserve)  alloc:   8.80 ns  reset:   0.77 ns
+apc::treemap (dynamic)  alloc:  13.57 ns  reset:   2.19 ns
+pmr::vector (reserve)   alloc:   0.74 ns  reset:   0.00 ns
+pmr::vector (dynamic)   alloc:   1.32 ns  reset:   0.00 ns
+std::vector (reserve)   alloc:   0.52 ns  reset:   0.00 ns
+std::vector (dynamic)   alloc:   1.27 ns  reset:   0.00 ns
+std::list (dynamic)     alloc:  10.06 ns  reset:  10.84 ns
+std::map (dynamic)      alloc:  52.81 ns  reset:  16.30 ns
 ```
 
 ```
-Benchmarking 100000 int allocations with individual expensive dealloc
-apc::arena              (individual dealloc not supported)
-apc::pool (reserve)     alloc:   2.18 ns  dealloc:   0.39 ns
-apc::pool (dynamic)     alloc:   5.46 ns  dealloc:   0.79 ns
-apc::vector (reserve)   alloc:   0.87 ns  dealloc: 3340.02 ns
-apc::vector (dynamic)   alloc:   1.02 ns  dealloc: 3347.29 ns
-std::vector (reserve)   alloc:   0.96 ns  dealloc: 3350.97 ns
-std::vector (dynamic)   alloc:   1.66 ns  dealloc: 3345.05 ns
-std::list               alloc:   9.17 ns  dealloc:  11.54 ns
+Benchmarking 100K int allocations with individual expensive erase
+apc::arena              (individual reset not supported)
+apc::pool (reserve)     alloc:   1.18 ns  reset:   0.46 ns
+apc::pool (dynamic)     alloc:   4.47 ns  reset:   0.73 ns
+apc::vector (reserve)   alloc:   0.74 ns  reset: 3347.55 ns
+apc::vector (dynamic)   alloc:   1.15 ns  reset: 3415.96 ns
+apc::hashmap (reserve)  alloc:  14.86 ns  reset:  21.56 ns
+apc::hashmap (dynamic)  alloc: 18257.56 ns  reset: 18572.57 ns
+apc::treemap (reserve)  alloc:   7.86 ns  reset:  17.95 ns
+apc::treemap (dynamic)  alloc:  12.53 ns  reset:  20.42 ns
+pmr::vector (reserve)   alloc:   0.73 ns  reset: 3340.98 ns
+pmr::vector (dynamic)   alloc:   1.12 ns  reset: 3341.33 ns
+std::vector (reserve)   alloc:   0.68 ns  reset: 3340.69 ns
+std::vector (dynamic)   alloc:   0.88 ns  reset: 3339.50 ns
+std::list (dynamic)     alloc:   7.99 ns  reset:  10.41 ns
+std::map (dynamic)      alloc:  31.00 ns  reset:  19.99 ns
 ```
+
+Note: The slowness of the apc::hashmap when using dynamic  
+allocation, is caused by rehashing keys at every  
+75%-fill-up-point, because the keys continous-array grows by  
+x2.
 
 ### Build tests 
 
