@@ -434,7 +434,9 @@ class vector final : public ivector<T> {
     )
       free(this->buffer);
 
+    #ifdef APC_ARENA
     this->_arena = nullptr;
+    #endif
     this->buffer = nullptr;
     this->next = nullptr;
     this->_end = nullptr;
