@@ -89,41 +89,43 @@ __Smaller numbers is better!__
 
 ```
 Benchmarking 10M int allocations with a single cheap reset
-apc::arena              alloc:   0.62 ns  reset:   0.00 ns
-apc::pool (reserve)     alloc:   2.44 ns  reset:   0.80 ns
-apc::pool (dynamic)     alloc:   5.43 ns  reset:   1.44 ns
-apc::vector (reserve)   alloc:   0.74 ns  reset:   0.00 ns
-apc::vector (dynamic)   alloc:   0.99 ns  reset:   0.00 ns
-apc::hashmap (reserve)  alloc:  54.18 ns  reset:   0.79 ns
-apc::hashmap (dynamic)  alloc:  63.18 ns  reset:   0.94 ns
-apc::treemap (reserve)  alloc:   7.96 ns  reset:   0.73 ns
-apc::treemap (dynamic)  alloc:  13.84 ns  reset:   3.00 ns
-pmr::vector (reserve)   alloc:   0.69 ns  reset:   0.00 ns
-pmr::vector (dynamic)   alloc:   1.30 ns  reset:   0.00 ns
-std::vector (reserve)   alloc:   0.50 ns  reset:   0.00 ns
-std::vector (dynamic)   alloc:   0.97 ns  reset:   0.00 ns
-std::list (dynamic)     alloc:  10.15 ns  reset:  12.10 ns
-std::map (dynamic)      alloc:  52.66 ns  reset:  16.70 ns
+apc::arena              insert:   0.72 ns  reset:   0.00 ns
+apc::pool (reserve)     insert:   1.83 ns  reset:   0.69 ns
+apc::pool (dynamic)     insert:   5.07 ns  reset:   1.21 ns
+apc::vector (reserve)   insert:   0.73 ns  reset:   0.00 ns
+apc::vector (dynamic)   insert:   0.89 ns  reset:   0.00 ns
+apc::hashmap (reserve)  insert:  52.82 ns  reset:   0.78 ns
+apc::hashmap (dynamic)  insert:  62.04 ns  reset:   0.97 ns
+apc::treemap (reserve)  insert:   8.28 ns  reset:   0.80 ns
+apc::treemap (dynamic)  insert:  13.32 ns  reset:   1.71 ns
+pmr::vector (reserve)   insert:   0.72 ns  reset:   0.00 ns
+pmr::vector (dynamic)   insert:   1.32 ns  reset:   0.00 ns
+std::vector (reserve)   insert:   0.51 ns  reset:   0.00 ns
+std::vector (dynamic)   insert:   0.98 ns  reset:   0.00 ns
+std::list (dynamic)     insert:  10.33 ns  reset:  10.70 ns
+std::map (dynamic)      insert:  52.76 ns  reset:  16.96 ns
 ```
+
 
 ```
 Benchmarking 100K int allocations with individual expensive erase
-apc::arena              (individual reset not supported)
-apc::pool (reserve)     alloc:   1.13 ns  reset:   0.39 ns
-apc::pool (dynamic)     alloc:   3.86 ns  reset:   0.52 ns
-apc::vector (reserve)   alloc:   0.69 ns  reset: 3390.79 ns
-apc::vector (dynamic)   alloc:   1.23 ns  reset: 3408.72 ns
-apc::hashmap (reserve)  alloc:  18.58 ns  reset:  16.70 ns
-apc::hashmap (dynamic)  alloc:  23.33 ns  reset:  13.50 ns
-apc::treemap (reserve)  alloc:   7.18 ns  reset:  17.52 ns
-apc::treemap (dynamic)  alloc:  10.61 ns  reset:  18.70 ns
-pmr::vector (reserve)   alloc:   0.75 ns  reset: 3362.82 ns
-pmr::vector (dynamic)   alloc:   1.89 ns  reset: 3361.03 ns
-std::vector (reserve)   alloc:   0.77 ns  reset: 3364.47 ns
-std::vector (dynamic)   alloc:   0.70 ns  reset: 3331.71 ns
-std::list (dynamic)     alloc:  10.61 ns  reset:  11.64 ns
-std::map (dynamic)      alloc:  35.69 ns  reset:  21.59 ns
+apc::arena              (individual erase not supported)
+apc::pool (reserve)     insert:   1.15 ns  erase:   0.44 ns
+apc::pool (dynamic)     insert:   3.65 ns  erase:   0.53 ns
+apc::vector (reserve)   insert:   0.70 ns  erase: 3343.67 ns
+apc::vector (dynamic)   insert:   1.22 ns  erase: 3346.95 ns
+apc::hashmap (reserve)  insert:  14.73 ns  erase:  15.71 ns
+apc::hashmap (dynamic)  insert:  21.56 ns  erase:  12.13 ns
+apc::treemap (reserve)  insert:   7.45 ns  erase:  17.34 ns
+apc::treemap (dynamic)  insert:   9.64 ns  erase:  18.79 ns
+pmr::vector (reserve)   insert:   0.73 ns  erase: 3350.74 ns
+pmr::vector (dynamic)   insert:   1.82 ns  erase: 3354.85 ns
+std::vector (reserve)   insert:   0.72 ns  erase: 3343.66 ns
+std::vector (dynamic)   insert:   0.79 ns  erase: 3345.92 ns
+std::list (dynamic)     insert:   9.24 ns  erase:  11.14 ns
+std::map (dynamic)      insert:  32.15 ns  erase:  19.84 ns
 ```
+
 
 ```
 Benchmarking 3M lookups/find across 10M int keys

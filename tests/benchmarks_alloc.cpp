@@ -62,10 +62,10 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::arena              alloc: " << std::setw(6) << alloc_ns
+        std::cout << "apc::arena              insert: " << std::setw(6) << alloc_ns
                   << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
-        } else {
-        std::cout << "apc::arena              (individual reset not supported)\n";
+      } else {
+        std::cout << "apc::arena              (individual erase not supported)\n";
       }
 
       // --------------------------------------------------------------
@@ -88,8 +88,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::pool (reserve)     alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "apc::pool (reserve)     insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -112,8 +112,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::pool (dynamic)     alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "apc::pool (dynamic)     insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -139,8 +139,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::vector (reserve)   alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "apc::vector (reserve)   insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -166,8 +166,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::vector (dynamic)   alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "apc::vector (dynamic)   insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -193,8 +193,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::hashmap (reserve)  alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "apc::hashmap (reserve)  insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -220,8 +220,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::hashmap (dynamic)  alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "apc::hashmap (dynamic)  insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -247,8 +247,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::treemap (reserve)  alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "apc::treemap (reserve)  insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -274,8 +274,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "apc::treemap (dynamic)  alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "apc::treemap (dynamic)  insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -304,8 +304,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "pmr::vector (reserve)   alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "pmr::vector (reserve)   insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -332,8 +332,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "pmr::vector (dynamic)   alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "pmr::vector (dynamic)   insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -360,8 +360,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "std::vector (reserve)   alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "std::vector (reserve)   insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -387,8 +387,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "std::vector (dynamic)   alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "std::vector (dynamic)   insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -414,8 +414,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "std::list (dynamic)     alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "std::list (dynamic)     insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       // --------------------------------------------------------------
@@ -442,8 +442,8 @@ int main() {
         t1 = Clock::now();
         double dealloc_ns = std::chrono::duration_cast<ns>(t1 - t0).count() / double(N);
 
-        std::cout << "std::map (dynamic)      alloc: " << std::setw(6) << alloc_ns
-                  << " ns  reset: " << std::setw(6) << dealloc_ns << " ns\n";
+        std::cout << "std::map (dynamic)      insert: " << std::setw(6) << alloc_ns
+                  << (!single_free ? " ns  erase: " : " ns  reset: ") << std::setw(6) << dealloc_ns << " ns\n";
       }
 
       std::cout << "\n\n";
