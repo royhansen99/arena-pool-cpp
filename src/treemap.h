@@ -122,7 +122,7 @@ class treemap;
           } else { \
             if(z == z->parent->right) { \
               z = z->parent; \
-              left_rotate(z->parent->parent); \
+              left_rotate(z); \
             } \
             \
             z->parent->is_red = false; \
@@ -299,7 +299,7 @@ class treemap;
       if(std::is_trivially_copyable<K>::value) { \
         memcpy(&z->key, &key, sizeof(K)); \
       } else { \
-        new (&z->key) K(std::forward<K>(key));  \
+        new (&z->key) K(key);  \
       } \
       \
       auto* x = root; \

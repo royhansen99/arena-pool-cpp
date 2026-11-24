@@ -5,6 +5,7 @@
 #include <cstdio>
 #include "../src/arena.h"
 #include "../src/treemap.h"
+#include "../src/string.h"
 
 int main() {
   { /* Test insert structure, Left-Left and Right-Right. 
@@ -496,6 +497,30 @@ int main() {
 
     assert(seventh.used() == 4 && *seventh.find(1) == 1 &&
       *seventh.find(4) == 4);
+  }
+  
+  { /* Big test */
+    apc::treemap<int, apc::str16> map(10000);
+    apc::str16 key;
+    char num[10];
+
+    for (int i = 0; i < 10000; ++i) {
+      snprintf(num, 10, "%d", i);
+
+      key = "key#";
+      key += num;
+
+      map.insert(key, i);
+    }
+
+    for (int i = 0; i < 10000; ++i) {
+      snprintf(num, 10, "%d", i);
+
+      key = "key#";
+      key += num;
+
+      assert(*map.find(key) == i);
+    }
   }
 
   return 0;
