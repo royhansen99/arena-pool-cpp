@@ -131,12 +131,25 @@ std::map (dynamic)      insert:  32.15 ns  erase:  19.84 ns
 Benchmarking 3M lookups/find across 10M int keys
 apc::pool    (too slow)
 apc::vector  (too slow)
-apc::hashmap find:   1.83 ns
-apc::treemap find:   6.22 ns
+apc::hashmap find:   5.41 ns
+apc::treemap find:  16.44 ns
 std::vector  (too slow)
 std::list    (too slow)
-std::map     find:   3.35 ns
+std::map     find:  10.15 ns
 ```
+
+
+```
+Benchmarking 3M lookups/find across 10M string keys
+apc::pool    (too slow)
+apc::vector  (too slow)
+apc::hashmap find:  55.80 ns
+apc::treemap find:  72.10 ns
+std::vector  (too slow)
+std::list    (too slow)
+std::map     find:  69.19 ns
+```
+
 
 ### Build tests 
 

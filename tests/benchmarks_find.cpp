@@ -1,11 +1,9 @@
-// COMPILE: g++ -std=c++17 -O3 -march=native benchmarks_find.cpp 
+// COMPILE: g++ -std=c++17 -O3 -march=native tests/benchmarks_find.cpp 
 
-#include "../src/arena.h"
 #include "../src/pool.h"
 #include "../src/vector.h"
 #include "../src/hashmap.h"
 #include "../src/treemap.h"
-#include <memory_resource>
 #include <vector>
 #include <chrono>
 #include <iostream>
@@ -13,7 +11,6 @@
 #include <string.h>
 #include <list>
 #include <map>
-#include <algorithm>
 
 using Clock = std::chrono::high_resolution_clock;
 using ns = std::chrono::nanoseconds;
@@ -104,7 +101,7 @@ int main() {
 
         auto t0 = Clock::now();
 
-        for(int i = 0; i < 10; i++) {
+        for(int i = 0; i < 30; i++) {
           for(int x = ranges[i][0]; x < ranges[i][1]; x ++) {
             // auto it = std::find(arr.begin(), arr.end(), x);
             // if(*it != x) std::cout << "ERROR!\n";
@@ -129,7 +126,7 @@ int main() {
 
         auto t0 = Clock::now();
 
-        for(int i = 0; i < 10; i++) {
+        for(int i = 0; i < 30; i++) {
           for(int x = ranges[i][0]; x < ranges[i][1]; x ++) {
             if(*map.find(&x) != x) std::cout << "ERROR!\n";
           }
@@ -152,7 +149,7 @@ int main() {
 
         auto t0 = Clock::now();
 
-        for(int i = 0; i < 10; i++) {
+        for(int i = 0; i < 30; i++) {
           for(int x = ranges[i][0]; x < ranges[i][1]; x ++) {
             if(*map.find(x) != x) std::cout << "ERROR!\n";
           }
@@ -193,7 +190,7 @@ int main() {
 
         auto t0 = Clock::now();
 
-        for(int i = 0; i < 10; i++) {
+        for(int i = 0; i < 30; i++) {
           for(int x = ranges[i][0]; x < ranges[i][1]; x ++) {
             // auto it = std::find(list.begin(), list.end(), x);
             // if(*it != x) std::cout << "ERROR!\n";
@@ -218,7 +215,7 @@ int main() {
 
         auto t0 = Clock::now();
 
-        for(int i = 0; i < 10; i++) {
+        for(int i = 0; i < 30; i++) {
           for(int x = ranges[i][0]; x < ranges[i][1]; x ++) {
             if(map.find(x)->second != x) std::cout << "ERROR!\n";
           }
