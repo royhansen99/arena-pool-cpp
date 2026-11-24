@@ -2,6 +2,7 @@
 
 #include "../src/string.h"
 #include <cassert>
+#include <functional>
 #include <iostream>
 
 int main() {
@@ -34,6 +35,32 @@ int main() {
       str.substr(0) == "Test!" &&
       str.substr(0, 1) == "T" &&
       str.substr(2, 3) == "st!"
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Less/greater than comparator 
+  // ------------------------------------------------------------------
+  {
+    apc::str str = "Test!";
+
+    apc::str a = "abc";
+    apc::str b = "abc";
+    apc::str c = "abcd";
+
+    assert(!(a < b) && !(b < a));
+
+    assert(a < c && !(c < a));
+
+    assert(!(a > b) && !(b > a));
+
+    assert(c > a && !(a > c));
+
+    assert(
+      !std::less<apc::str>{}(a, b) &&
+      !std::less<apc::str>{}(b, a) &&
+      std::less<apc::str>{}(a, c) &&
+      !std::less<apc::str>{}(c, a)
     );
   }
 

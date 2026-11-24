@@ -354,13 +354,55 @@ namespace apc {
   bool operator!=(const char* other) const { \
     return compare(other) != 0; \
   } \
+  \
   template <size_t S> \
   bool operator!=(const str_fixed<S>& other) const { \
     return compare(other.c_str()) != 0; \
   } \
+  \
   template <size_t S> \
   bool operator!=(const str_dynamic<S>& other) const { \
     return compare(other.c_str()) != 0; \
+  } \
+  \
+  template <size_t S> \
+  bool operator<(const str_dynamic<S>& other) const { \
+    int len = other._used; \
+    if(_used < len) len = _used; \
+    \
+    int cmp = memcmp(buffer, other.buffer, len); \
+    \
+    return cmp == 0 ? _used < other._used : cmp < 0; \
+  } \
+  \
+  template <size_t S> \
+  bool operator<(const str_fixed<S>& other) const { \
+    int len = other._used; \
+    if(_used < len) len = _used; \
+    \
+    int cmp = memcmp(buffer, other.buffer, len); \
+    \
+    return cmp == 0 ? _used < other._used : cmp < 0; \
+  } \
+  \
+  template <size_t S> \
+  bool operator>(const str_dynamic<S>& other) const { \
+    int len = other._used; \
+    if(_used < len) len = _used; \
+    \
+    int cmp = memcmp(buffer, other.buffer, len); \
+    \
+    return cmp == 0 ? _used > other._used : cmp > 0; \
+  } \
+  \
+  template <size_t S> \
+  bool operator>(const str_fixed<S>& other) const { \
+    int len = other._used; \
+    if(_used < len) len = _used; \
+    \
+    int cmp = memcmp(buffer, other.buffer, len); \
+    \
+    return cmp == 0 ? _used > other._used : cmp > 0; \
   } \
   \
   char& operator[](const size_t pos) { \
