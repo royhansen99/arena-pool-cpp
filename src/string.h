@@ -34,7 +34,7 @@ namespace apc {
 // ptr allocated on every use of the str_fixed class.
 //
 // Im keeping the macros for now.
-#define STRING_COMMON_ITERATOR(A) \
+#define APC_STRING_COMMON_ITERATOR(A) \
   class iterator { \
     char* it; \
     bool _reverse; \
@@ -93,7 +93,7 @@ namespace apc {
     return iterator(*(ptr - 1)); \
   }
 
-#define STRING_COMMON_METHODS(A) \
+#define APC_STRING_COMMON_METHODS(A) \
   template <size_t S> \
   A& insert(const size_t pos, const str_fixed<S>& other, const size_t sub_pos, const size_t len) { \
     return insert(pos, other.c_str(), other.used(), sub_pos, len); \
@@ -437,7 +437,7 @@ class str_fixed {
 public:
   static const std::size_t npos = static_cast<std::size_t>(-1);
 
-  STRING_COMMON_ITERATOR(str_fixed)
+  APC_STRING_COMMON_ITERATOR(str_fixed)
 
   str_fixed() : _used(0) {
     buffer[0] = '\0';
@@ -480,7 +480,7 @@ public:
     return N;
   }
 
-  STRING_COMMON_METHODS(str_fixed);
+  APC_STRING_COMMON_METHODS(str_fixed);
 };
 
 #ifndef APC_STRING_STD_OSTREAM_DISABLE 
@@ -584,7 +584,7 @@ class str_dynamic {
 public:
   static const std::size_t npos = static_cast<std::size_t>(-1);
 
-  STRING_COMMON_ITERATOR(str_dynamic)
+  APC_STRING_COMMON_ITERATOR(str_dynamic)
 
   str_dynamic(size_t size = N) :
     #ifdef APC_ARENA
@@ -807,7 +807,7 @@ public:
     return _size;
   }
 
-  STRING_COMMON_METHODS(str_dynamic);
+  APC_STRING_COMMON_METHODS(str_dynamic);
 };
 
 #ifndef APC_STRING_STD_OSTREAM_DISABLE 
