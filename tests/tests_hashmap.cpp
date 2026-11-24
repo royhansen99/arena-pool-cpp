@@ -2,6 +2,7 @@
 
 #include "../src/arena.h"
 #include "../src/hashmap.h"
+#include "../src/string.h"
 #include <cassert>
 #include <cstring>
 #include <iostream>
@@ -303,6 +304,53 @@ int main() {
       *third.rbegin() == *fifth.rbegin() &&
       &*third.begin() != &*fifth.begin() &&
       &*third.rbegin() != &*fifth.rbegin()); 
+  }
+
+  // String keys (char-array).
+  //
+  // Will automatically zero-out remaining bytes for
+  // shorter char-strings. The zeroing happens for keys
+  // on inserts/erase/find, so you dont need to think
+  // about it at all.
+  //
+  // In this example key-size is set to 8 chars.
+  {
+    apc::hashmap_str<apc::str32, 8> map;
+    char num[4];
+
+    for(int i = 0; i < 100; i++) {
+      snprintf(num, 4, "%d", i);
+
+      apc::str8 key = "key#";
+      key += num;
+
+      apc::str32 value = "This is an example! ";
+      value += key;
+
+      map.insert(key.c_str(), value);
+    }
+
+    for(int i = 99; i >= 0; i--) {
+      snprintf(num, 4, "%d", i);
+
+      apc::str8 key = "key#";
+      key += num;
+
+      apc::str32 value = "This is an example! ";
+      value += key;
+
+      assert(*map.find(key.c_str()) == value);
+    }
+
+    assert(map.find("key#") == nullptr);
+
+    {
+      apc::hashmap_fixed_str<apc::str32, 8, 10> map_fixed;
+      map_fixed.insert("test", "hello world!");
+
+      assert(*map_fixed.find("test") == "hello world!");
+    }
+   
   }
 
   return 0;

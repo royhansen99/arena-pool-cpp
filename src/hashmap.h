@@ -116,12 +116,12 @@ struct hashmap_page {
   } \
   \
   template <size_t X, size_t Y> \
-  TYPE(hashmap_fixed<T, X, Y, FORCE_TRIVIAL_COPY>& other) : TYPE() { \
+  TYPE(hashmap_fixed<T, X, Y, FORCE_TRIVIAL_COPY, STRING_KEY>& other) : TYPE() { \
     operator=(other); \
   } \
   \
   template <size_t X, size_t Y> \
-  TYPE& operator=(hashmap_fixed<T, X, Y, FORCE_TRIVIAL_COPY>& other) { \
+  TYPE& operator=(hashmap_fixed<T, X, Y, FORCE_TRIVIAL_COPY, STRING_KEY>& other) { \
     reset(); \
     \
     using ItemType = hashmap_item<T, S>; \
@@ -138,12 +138,12 @@ struct hashmap_page {
   } \
   \
   template <size_t X> \
-  TYPE(hashmap<T, X, FORCE_TRIVIAL_COPY>& other) : TYPE() { \
+  TYPE(hashmap<T, X, FORCE_TRIVIAL_COPY, STRING_KEY>& other) : TYPE() { \
     operator=(other); \
   } \
   \
   template <size_t X> \
-  TYPE& operator=(hashmap<T, X, FORCE_TRIVIAL_COPY>& other) { \
+  TYPE& operator=(hashmap<T, X, FORCE_TRIVIAL_COPY, STRING_KEY>& other) { \
     reset(); \
     \
     using ItemType = hashmap_item<T, S>; \
@@ -170,7 +170,7 @@ struct hashmap_page {
     reset_pool(); \
   } \
   \
-  T* insert(void* key, T& item) { \
+  T* insert(const void* key, T& item) { \
     auto* target = insert_raw(key); \
     \
     if(target == nullptr) return nullptr; \
@@ -194,18 +194,21 @@ struct hashmap_page {
     return target; \
   } \
   \
-  T* insert(void* key, T&& item) { \
+  T* insert(const void* key, T&& item) { \
     return insert(key, item); \
   } \
   \
-  T* find(void* key) { \
-    uint64_t hash = rapidhashNano(key, S); \
+  T* find(const void* key) { \
+    char _key[S]; \
+    if(STRING_KEY) strncpy(_key, static_cast<const char*>(key), S); \
+    \
+    uint64_t hash = rapidhashNano(STRING_KEY ? _key : key, S); \
     size_t index = hash % (keys_size - 1); \
     \
     auto* current = keys[index]; \
     \
     while(current != nullptr) { \
-      if(memcmp(current->key, key, S) == 0) \
+      if(memcmp(current->key, STRING_KEY ? _key : key, S) == 0) \
         return &current->current; \
       \
       current = current->hash_next; \
@@ -214,17 +217,20 @@ struct hashmap_page {
     return nullptr; \
   } \
   \
-  bool erase(void* key) { \
+  bool erase(const void* key) { \
     if(!_used) return false; \
     \
-    uint64_t hash = rapidhashNano(key, S); \
+    char _key[S]; \
+    if(STRING_KEY) strncpy(_key, static_cast<const char*>(key), S); \
+    \
+    uint64_t hash = rapidhashNano(STRING_KEY ? _key : key, S); \
     size_t index = hash % (keys_size - 1); \
     \
     hashmap_item<T, S>* prev = nullptr; \
     auto* current = keys[index]; \
     \
     while(current != nullptr) { \
-      if(memcmp(current->key, key, S) == 0) { \
+      if(memcmp(current->key, STRING_KEY ? _key : key, S) == 0) { \
         if(prev != nullptr)\
           prev->hash_next = current->hash_next; \
         else \
@@ -262,10 +268,10 @@ struct hashmap_page {
     ); \
   }
 
-template <typename T, size_t S, bool FORCE_TRIVIAL_COPY = false>
+template <typename T, size_t S, bool FORCE_TRIVIAL_COPY = false, bool STRING_KEY = false>
 class hashmap;
 
-template <typename T, size_t S, size_t Z, bool FORCE_TRIVIAL_COPY = false>
+template <typename T, size_t S, size_t Z, bool FORCE_TRIVIAL_COPY = false, bool STRING_KEY = false>
 class hashmap_fixed {
 private:
   hashmap_item<T, S>* keys[Z];
@@ -291,17 +297,20 @@ private:
     return current;
   }
 
-  T* insert_raw(void* key) {
+  T* insert_raw(const void* key) {
     if(!size()) return nullptr;
 
-    uint64_t hash = rapidhashNano(key, S);
+    char _key[S];
+    if(STRING_KEY) strncpy(_key, static_cast<const char*>(key), S);
+
+    uint64_t hash = rapidhashNano(STRING_KEY ? _key : key, S);
     size_t index = hash % (keys_size - 1);      
 
     auto** location = &keys[index];
     auto* current = *location;
 
     while(current != nullptr) {
-      if(memcmp(current->key, key, S) == 0) {
+      if(memcmp(current->key, STRING_KEY ? _key : key, S) == 0) {
         if(!std::is_trivially_destructible<T>::value &&
           !FORCE_TRIVIAL_COPY)
           current->current.~T();
@@ -316,7 +325,7 @@ private:
 
     if(n == nullptr) return nullptr;
 
-    memcpy(n->key, key, S);
+    memcpy(n->key, STRING_KEY ? _key : key, S);
 
     n->next = *location;
 
@@ -340,7 +349,7 @@ public:
   }
 };
 
-template <typename T, size_t S, bool FORCE_TRIVIAL_COPY>
+template <typename T, size_t S, bool FORCE_TRIVIAL_COPY, bool STRING_KEY>
 class hashmap {
 private:
   #ifdef APC_ARENA
@@ -371,18 +380,23 @@ private:
     return current;
   }
 
-  T* insert_raw(void* key) {
+  T* insert_raw(const void* key) {
     if(!size()) init();
     if(!size()) return nullptr;
 
-    uint64_t hash = rapidhashNano(key, S);
+    char _key[S];
+    if(STRING_KEY) strncpy(_key, static_cast<const char*>(key), S);
+
+    uint64_t hash;
+
+    hash = rapidhashNano(STRING_KEY ? _key : key, S);
     size_t index = hash % (keys_size - 1);
 
     auto** location = &keys[index];
     auto* current = *location;
 
     while(current != nullptr) {
-      if(memcmp(current->key, key, S) == 0) {
+      if(memcmp(current->key, STRING_KEY ? _key : key, S) == 0) {
         if(!std::is_trivially_destructible<T>::value &&
           !FORCE_TRIVIAL_COPY)
           current->current.~T();
@@ -397,7 +411,7 @@ private:
 
     if(n == nullptr) return nullptr;
 
-    memcpy(n->key, key, S);
+    memcpy(n->key, STRING_KEY ? _key : key, S);
 
     n->hash_next = *location;
 
@@ -640,5 +654,11 @@ public:
   }
   #endif
 };
+
+template <typename T, size_t S, bool FORCE_TRIVIAL_COPY = false>
+using hashmap_str = hashmap<T, sizeof(char[S]), FORCE_TRIVIAL_COPY, true>;
+
+template <typename T, size_t S, size_t Z, bool FORCE_TRIVIAL_COPY = false>
+using hashmap_fixed_str = hashmap_fixed<T, sizeof(char[S]), Z, FORCE_TRIVIAL_COPY, true>;
 
 };
