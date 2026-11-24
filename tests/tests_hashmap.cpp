@@ -350,7 +350,6 @@ int main() {
 
       assert(*map_fixed.find("test") == "hello world!");
     }
-   
   }
 
   return 0;
