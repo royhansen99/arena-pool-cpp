@@ -1,6 +1,5 @@
 // COMPILE: clang++ -std=c++17 -O3 -march=native tests/benchmarks_find_string.cpp 
 
-#include "../src/arena.h"
 #include "../src/pool.h"
 #include "../src/string.h"
 #include "../src/vector.h"
