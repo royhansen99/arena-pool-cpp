@@ -1,4 +1,4 @@
-// COMPILE: g++ -std=c++17 -O3 -march=native tests/benchmarks_find.cpp 
+// COMPILE: clang++ -std=c++17 -O3 -march=native tests/benchmarks_find.cpp 
 
 #include "../src/pool.h"
 #include "../src/vector.h"

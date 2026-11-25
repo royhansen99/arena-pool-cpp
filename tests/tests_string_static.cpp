@@ -1,4 +1,4 @@
-// COMPILE: g++ -std=c++11 -g -Wall -fsanitize=address tests_string_static.cpp
+// COMPILE: clang++ -std=c++11 -g -Wall -fsanitize=address tests_string_static.cpp
 
 #include "../src/string.h"
 #include <cassert>

@@ -1,4 +1,4 @@
-// COMPILE: g++ -std=c++11 -Wall -g -fsanitize=address tests/tests_treemap.cpp
+// COMPILE: clang++ -std=c++11 -Wall -g -fsanitize=address tests/tests_treemap.cpp
 #define APC_TREEMAP_TESTING
 #include <cassert>
 #include <string>

@@ -1,4 +1,4 @@
-// COMPILE: g++ -std=c++17 -O3 -march=native benchmarks_alloc.cpp 
+// COMPILE: clang++ -std=c++17 -O3 -march=native benchmarks_alloc.cpp 
 
 #include "../src/arena.h"
 #include "../src/pool.h"

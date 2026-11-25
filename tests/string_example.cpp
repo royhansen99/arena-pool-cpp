@@ -1,4 +1,4 @@
-// Compile: g++ -std=c++11 -g -Wall -fsanitize=address string_example.cpp
+// Compile: clang++ -std=c++11 -g -Wall -fsanitize=address string_example.cpp
 
 #include "../src/string.h"
 #include <iostream>
