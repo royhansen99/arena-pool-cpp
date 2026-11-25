@@ -1,4 +1,4 @@
-// COMPILE: g++ -std=c++11 -Wall -g -fsanitize=address tests/tests_hashmap.cpp
+// COMPILE: clang++ -std=c++11 -Wall -g -fsanitize=address tests/tests_hashmap.cpp
 
 #include "../src/arena.h"
 #include "../src/hashmap.h"
@@ -351,6 +351,45 @@ int main() {
       assert(*map_fixed.find("test") == "hello world!");
     }
   }
+
+  // Struct as key.
+  // Use macro-helper APC_CLR_PAD() to conveniently
+  // zero-out padding.
+  #ifndef APC_CLR_PAD_MISSING
+  {
+    struct Foo {
+      int bar;
+      size_t value;
+      float some;
+    };
+
+    Foo key1;
+    memset(&key1, 1, sizeof(Foo)); // Simulate padded garbage.
+    key1.bar = 1;
+    key1.value = 100000000;
+    key1.some = 50.20;
+
+    APC_CLR_PAD(&key1);
+
+    apc::hashmap<int, sizeof(Foo)> map;
+
+    map.insert(&key1, 100);
+
+    {
+      Foo key2;
+      memset(&key2, 1, sizeof(Foo)); // Simulate padded garbage.
+      key2.bar = 1;
+      key2.value = 100000000;
+      key2.some = 50.20;
+
+      assert(map.find(&key2) == nullptr);
+
+      APC_CLR_PAD(&key2);
+
+      assert(*map.find(&key2) == 100);
+    }
+  }
+  #endif
 
   return 0;
 }

@@ -17,6 +17,22 @@
 #include <utility>
 #include "./rapidhash.h"
 
+// Helper for clearing padding when using struct keys. Should work on
+// most modern platforms (linux, Windows, macOS).
+// If you attempt to use it when your compiler does not support it,
+// you will get an error.
+#if defined(__has_builtin) && __has_builtin(__builtin_clear_padding)
+  #define APC_CLR_PAD(ptr) __builtin_clear_padding(ptr)
+#elif defined(__GNUC__) && (__GNUC__ >= 11)
+  #define APC_CLR_PAD(ptr) __builtin_clear_padding(ptr)
+#elif defined(_MSC_VER)
+  #define APC_CLR_PAD(ptr) __builtin_zero_non_value_bits(ptr)
+#else
+  #define APC_CLR_PAD(ptr) \
+    assert(false && "APC_CLR_PAD called on unsupported compiler"); 
+  #define APC_CLR_PAD_MISSING
+#endif
+
 namespace apc {
 
 template <typename T, size_t S>
