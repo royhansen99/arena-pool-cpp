@@ -6,6 +6,50 @@
 #include "../src/arena.h"
 #include "../src/treemap.h"
 #include "../src/string.h"
+#include "../src/vector.h"
+
+template <typename T, typename K>
+void walk_and_check_nodes(apc::treemap_node<T, K>* node, int count, bool previous_red, apc::vector<int>* counts) {
+  if(!node) {
+    counts->push(++count);
+
+    return;
+  }
+
+  if(!node->is_red) count++;
+  else if(previous_red) // Double red error.
+    assert(false && "Double red found");
+
+  if(node->left) // Left node must always be less.
+    assert(std::less<K>{}(node->left->key,
+      node->key));
+
+  if(node->right) // Right node must always be greater.
+    assert(std::less<K>{}(node->key,
+      node->right->key));
+
+  walk_and_check_nodes(node->left, count, node->is_red, counts);
+  walk_and_check_nodes(node->right, count, node->is_red, counts);
+}
+
+// Test for equal black height to all leaves,
+// and that there are no double reds.
+//
+// Will save black height to all leaves in
+// counts-list, and then we loop through it
+// to check that all heights are equal.
+template <typename T, typename K>
+void test_treemap_integrity(apc::treemap_node<T, K>* root) {
+  apc::vector<int> counts;
+
+  walk_and_check_nodes(root, 0, false, &counts);
+
+  int target_count = -1;
+  for(auto& i : counts) {
+    if(target_count == -1) target_count = i;
+    else assert(target_count == i);
+  }
+}
 
 int main() {
   { /* Test insert structure, Left-Left and Right-Right. 
@@ -24,6 +68,8 @@ int main() {
       map.insert(v, v);
 
     auto* twenty = map.get_root();
+
+    test_treemap_integrity(map.get_root());
 
     assert(
       twenty && twenty->current == 20 && !twenty->is_red &&
@@ -91,6 +137,8 @@ int main() {
     for(int v : {10, 30, 20})
       map.insert(v, v);
 
+    test_treemap_integrity(map.get_root());
+
     auto* twenty = map.get_root();
 
     assert(
@@ -135,6 +183,8 @@ int main() {
 
     auto* twenty = map.get_root();
 
+    test_treemap_integrity(map.get_root());
+
     assert(
       twenty && twenty->key == 20 && !twenty->is_red &&
       twenty->parent == nullptr
@@ -172,6 +222,8 @@ int main() {
 
     assert(*map.find(1) == 100 && *map.find(2) == 2020 &&
       *map.find(3) == 300 && map.used() == 3);
+
+    test_treemap_integrity(map.get_root());
   }
 
   { /* Test insert_new() */
@@ -356,6 +408,8 @@ int main() {
     for(const char* v : letters)
       map.insert(v, v);
 
+    test_treemap_integrity(map.get_root());
+
     {
       std::string result;
 
@@ -534,6 +588,8 @@ int main() {
 
       assert(*map.find(key) == i);
     }
+
+    test_treemap_integrity(map.get_root());
   }
 
   return 0;
