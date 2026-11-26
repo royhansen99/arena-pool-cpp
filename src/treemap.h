@@ -282,16 +282,33 @@ class treemap;
       auto* node = root; \
       \
       while(node != nullptr) { \
-        if(node->key == key) return node; \
-        \
-        node = COMPARE{}(key, node->key) ? \
-          node->left : node->right; \
+        if(COMPARE{}(key, node->key)) node = node->left; \
+        else if(!COMPARE{}(node->key, key)) return node; \
+        else node = node->right; \
       } \
       \
       return nullptr; \
     } \
     \
     treemap_node<T, K>* insert_raw(K& key) { \
+      \
+      auto* x = root; \
+      \
+      if(last && COMPARE{}(last->key, key)) x = last; \
+      else if(last && !COMPARE{}(key, last->key)) return last; \
+      else if(first && COMPARE{}(key, first->key)) x = first; \
+      else if(first && !COMPARE{}(first->key, key)) return first; \
+      \
+      treemap_node<T, K>* y = nullptr; \
+      \
+      while(x != nullptr) { \
+        y = x; \
+        \
+        if(COMPARE{}(key, x->key)) x = x->left; \
+        else if(!COMPARE{}(x->key, key)) return x; \
+        else x = x->right; \
+      } \
+      \
       auto* z = allocate(); \
       \
       if(z == nullptr) return nullptr; \
@@ -300,20 +317,6 @@ class treemap;
         memcpy(&z->key, &key, sizeof(K)); \
       } else { \
         new (&z->key) K(key);  \
-      } \
-      \
-      auto* x = root; \
-      \
-      if(last && COMPARE{}(last->key, z->key)) x = last; \
-      else if(first && COMPARE{}(z->key, first->key)) x = first; \
-      \
-      treemap_node<T, K>* y = nullptr; \
-      \
-      while(x != nullptr) { \
-        y = x; \
-        \
-        if(COMPARE{}(z->key, x->key)) x = x->left; \
-        else x = x->right; \
       } \
       \
       z->parent = y; \

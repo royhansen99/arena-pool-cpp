@@ -161,6 +161,19 @@ int main() {
     }
   }
 
+  { /* Test overwrite existing key. */
+    apc::treemap<int, int> map;
+
+    map.insert(1, 100);
+    map.insert(2, 200); // This will be overwritten.
+    map.insert(3, 300);
+
+    map.insert(2, 2020); // Overwrite key: 2
+
+    assert(*map.find(1) == 100 && *map.find(2) == 2020 &&
+      *map.find(3) == 300 && map.used() == 3);
+  }
+
   { /* Test insert_new() */
     struct test {
       int foo;
