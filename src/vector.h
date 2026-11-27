@@ -16,7 +16,7 @@
 #include <utility>
 #include <new>
 
-#ifndef APC_VECTOR_STD_VECTORS_DISABLE 
+#ifdef APC_VECTOR_INTEROP 
 #include <vector>
 #endif
 
@@ -94,7 +94,7 @@ public:
     return *this;
   }
 
-  #ifndef APC_VECTOR_STD_VECTORS_DISABLE
+  #ifdef APC_VECTOR_INTEROP
   ivector& operator=(const std::vector<T>& other) {
     if(!buffer) return *this;
 
@@ -403,7 +403,7 @@ public:
     this->operator=(list);
   }
 
-  #ifndef APC_VECTOR_STD_VECTORS_DISABLE
+  #ifdef APC_VECTOR_INTEROP
   vector_fixed(const std::vector<T>& other) : vector_fixed() {
     this->operator=(other);
   }
@@ -501,7 +501,7 @@ public:
     this->operator=(list);
   }
 
-  #ifndef APC_VECTOR_STD_VECTORS_DISABLE
+  #ifdef APC_VECTOR_INTEROP
   vector(const std::vector<T>& other) :
     vector(other.size())
   {
@@ -555,11 +555,13 @@ public:
     this->operator=(list);
   }
 
+  #ifdef APC_VECTOR_INTEROP
   vector(apc::arena& __arena, const size_t size, const std::vector<T>& other) :
     vector(__arena, size) 
   {
     this->operator=(other);
   }
+  #endif
 
   vector(apc::arena& __arena, const size_t size, const ivector<T>& other) :
     vector(__arena, size) 
@@ -612,7 +614,7 @@ public:
     return *this;
   }
 
-  #ifndef APC_VECTOR_STD_VECTORS_DISABLE
+  #ifdef APC_VECTOR_INTEROP
   vector& operator=(const std::vector<T>& other) {
     this->reset();
     maybe_grow(other.size());

@@ -1,6 +1,7 @@
 // COMPILE: clang++ -std=c++11 -Wall -g -fsanitize=address tests_vector.cpp
 
 #include "../src/arena.h"
+#define APC_VECTOR_INTEROP
 #include "../src/vector.h"
 #include <cassert>
 #include <iostream>
